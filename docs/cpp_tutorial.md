@@ -24,7 +24,7 @@ Wキーを押すと球が進む。この短い動作にも、入力を読む処�
 
 [実装TODO](todo.md)の手順2以降を、実際に書くコードへ落とし込みます。WindowsへのcloneはTODOの手順1を先に済ませてください。C++の文法をすべて覚える必要はありません。各章のコードを動かし、値を変え、結果を予想して確かめます。
 
-このファイルは教材です。リポジトリの`src/`、`tests/`、`CMakeLists.txt`へ実装を配置したものではありません。本文で「完全例」としたコードブロックは、直前のファイル名へ保存する内容です。「差し込み例」は指定した場所へ追加・置換します。第5章はワークブック形式で、概念・APIの説明を読み、骨組みの空欄と応用課題を自分で実装します。第5章の未完成コードはそのままではビルドできません。
+このファイルは教材です。リポジトリの`src/`、`tests/`、`CMakeLists.txt`へ実装を配置したものではありません。本文で「完全例」としたコードブロックは、直前のファイル名へ保存する内容です。「差し込み例」は指定した場所へ追加・置換します。第5章は、定型的な基盤をコピーして使い、ゲームによって変わる処理を自分で書く構成です。「コピー可」「理解して使う」「自分で書く」の指針に従ってください。自分で書く箇所の骨組みには未完成のものがあります。
 
 ### TODOとの対応
 
@@ -78,7 +78,7 @@ tests/
 
 **合計24時間、1日平均4時間**を確保する計画です。内訳は実装・理解・動作確認に約20時間、環境構築や不具合対応の予備に約4時間です。従来の週15時間より多く、この6日間は約9時間の上積みが必要になります。週15時間のペースでは6日間で約13時間のため、今回の期限に向けた余裕は小さくなります。
 
-これは、既存のシミュレーションを使い、教材のサンプルを読みながら自分の実装へ合わせる場合の計画上の見積もりです。実測した所要時間や完成の保証ではありません。第5章は現在、概念理解と自力実装を含むワークブックへ改稿しています。旧形式を前提とした24時間の見積もりは再検証していないため、演習の実績を記録して残り時間を見直してください。Direct3DやCMakeの問題が長引いた場合は、下記の到達点で遅れを判断します。
+これは、既存のシミュレーションを使い、教材のサンプルを読みながら自分の実装へ合わせる場合の計画上の見積もりです。実測した所要時間や完成の保証ではありません。第5章は10/22に、定型部分の自力実装を減らす構成へ改稿しました。所要時間は再計測していないため、この24時間を保証値とせず、動作した区切りで残作業を見直してください。Direct3DやCMakeの問題が長引いた場合は、下記の到達点で遅れを判断します。
 
 10/21のクラウド環境で確認した時点では、`Simulation.hpp/.cpp`とヘッドレス実行のコードがあり、描画は作成途中です。`tests/SimulationTests.cpp`は存在せず、CMake構成はその参照で失敗しました。GCCでの直接ビルドとヘッドレス実行は成功しました。Windowsのビルドと画面動作は未確認です。次の違いを調整する時間も計画に含めています。
 
@@ -633,15 +633,25 @@ int main() {
 
 <a id="chapter-5"></a>
 
-## 第5章 WindowsとDirect3D 11 — 描画を組み立てるワークブック
+## 第5章 WindowsとDirect3D 11 — 基盤を使い、ゲームの描画と動作を作る
 
-この章では、Direct3D 11の仕組みを理解しながら、自分で描画アプリを書きます。完成済みファイルの転記ではなく、背景色、直方体、球体、ゲーム、GUIの順に、一つずつ動く範囲を広げます。第5.6節のビルド準備を確認し、第5.1節から取り組んでください。最初の実行までの道順は第5.10節にまとめています。
+この章の目標は、Direct3D 11を使ってゲームの見せ方と動作を実装できることです。初期化APIの全引数やWin32の手続きを、資料なしで再現することは求めません。背景色、直方体、球体、ゲーム、GUIの順に動く範囲を広げます。第5.6節のビルド準備を先に接続し、第5.10節の進行表で実行する区切りを確認してください。
 
 対象はWindows 11 x64、MSVC、C++20、Windows SDK、Direct3D 11、DirectXTKです。macOSやLinuxではこの描画アプリを検証できません。古いDirectX SDKやD3DXは使用しません。
 
-**取り組み方：** 各課題で、先に期待する結果を書き、コードを書いてから確認します。ヒントは折りたたんであります。空欄の`TODO`はあなたが実装する部分です。`#error`付きの骨組みは未完成で、課題を終えてからその行を削除します。空欄を消すだけで完了にはせず、各節の観察項目を満たしてください。コード断片は指定した関数に組み込み、ファイル全体への無条件な置換はしません。
+**実装済みの5-Hまでは、そのまま使います。** 5-A〜5-Hの本文と課題番号は残しています。追加のノートや書き直しは不要です。これから進む5-I以降では、自力実装を次のように絞ります。
 
-記録欄は各課題で繰り返し使います。本文へ記入しても、別のノートへ書いても構いません。
+| 指針 | 取り組み方 | 該当箇所 |
+| --- | --- | --- |
+| **コピー可** | 指定箇所へ貼り付けて使う。役割・呼ぶ時点・失敗の確認方法を押さえれば進んでよい | 5-Iの深度とサイズ変更、5-M〜5-OのWin32、5-RのCMake、5-S〜5-TのImGui連携。既習の5-D〜5-Hも再現練習は不要 |
+| **理解して使う** | 完成例を使い、ゲームに影響する順序と設定を説明できるようにする。APIや定型ループをゼロから組み直さない | 図形の生成、固定時間更新の枠組み、GUIを描く順序 |
+| **自分で書く** | 仕様から計算や条件分岐を書く。分からないAPIの呼び方は例や資料を見てよい | 5-J〜5-Lのカメラ・座標変換・ステージ描画、5-Pの入力変換、5-Qの1ステップと再開、5-UのUIとプレイ状態 |
+
+「コピー可」は、表示やゲームルールに関係する変更が必要になった時に調べ直せれば十分、という範囲です。定数の暗記、COMや呼び出し規約の詳細、全引数のノート作成、複数描画先などの発展調査は必須にしません。エラーを無視することとは区別し、失敗コードとデバッグレイヤーの警告は確認します。
+
+**取り組み方：** コピーする基盤を先につなぎ、小さく実行してから、自分で書く部分へ進みます。各課題で未知の型やAPIを推測して埋める必要はありません。`#error`付きの骨組みは未完成です。コード断片は指定した関数へ組み込み、置換と指定した箇所だけを置き換えます。
+
+記録は各課題ではなく、5.10の動作確認の区切りごとに一度で十分です。下の詳細な記録欄は任意で、通常は「動いたこと／未解決／次の作業」の3行だけ残します。
 
 ```text
 予想：
@@ -899,35 +909,103 @@ throwIfFailed(swapChain_->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf())),
 
 **確認：** 赤成分だけ変えて再ビルドし、予想した色になることを確かめてください。図形もカメラもない段階で、表示経路が動くことを確認します。
 
-#### 実習5：深度とサイズ変更を扱う
+#### 5-Hまでのコードを、最初の実行へつなぐ（コピー可）
 
-深度の資源はバックバッファとは別に作ります。`D3D11_TEXTURE2D_DESC`を初期化し、次を設定してください。
+既に書いた初期化・描画処理はそのまま使います。最初に背景色を表示するため、未実装なら次のコンストラクターをRenderer.cppのnamespace sil::renderer内へ追加します。ヘッダーのwidth_・height_はそれぞれ = 0 で初期化し、viewport_はComPtrではなく D3D11_VIEWPORT viewport_{}; とします。
 
-| フィールド | 値 |
-| --- | --- |
-| `Width`、`Height` | 描画領域の幅と高さ |
-| `MipLevels`、`ArraySize` | それぞれ`1` |
-| `Format` | `DXGI_FORMAT_D24_UNORM_S8_UINT` |
-| `SampleDesc.Count` | `1`（描画先と一致させる） |
-| `Usage` | `D3D11_USAGE_DEFAULT` |
-| `BindFlags` | `D3D11_BIND_DEPTH_STENCIL` |
+```cpp
+Renderer::Renderer(HWND window, std::uint32_t width, std::uint32_t height)
+{
+    createDeviceAndSwapChain(window);
+    createSizeDependentResources(width, height);
+    width_ = width;
+    height_ = height;
+}
+```
 
-`device_->CreateTexture2D(&description, nullptr, output)`で画像を作り、`CreateDepthStencilView(resource, nullptr, output)`でビューを作ります。HRESULTを両方確認してください。`render()`では深度ビューも描画先設定へ渡し、毎フレーム`ClearDepthStencilView(view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0F, 0)`を呼びます。本章ではD3D11の既定の深度ステート（有効、比較LESS、書き込みあり）を使います。
+present()が戻り値を無視している場合は、次の形にします。throwIfFailedの処理名の引数は const char* operation です。エラー文では文字列 "hex" ではなく std::hex を使います。
 
-**課題5-I：** 深度作成を`createSizeDependentResources()`へ追加し、`resize()`を次の仕様で実装してください。
+```cpp
+void Renderer::present()
+{
+    if (width_ == 0 || height_ == 0) {
+        return;
+    }
+    throwIfFailed(swapChain_->Present(1, 0), "Present");
+}
+```
 
-1. 幅または高さが0なら戻る。
-2. 初回ならそのまま資源を作る。
-3. 2回目以降は`OMSetRenderTargets(0, nullptr, nullptr)`で古い描画先のバインドを外す。
-4. 古い描画先ビュー・深度ビュー・深度画像を解放する。
-5. `swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0)`を成功確認付きで呼ぶ。
-6. 新しいサイズで資源を作り、幅と高さを保存する。
+**次は5.6のコピー用CMakeと、5.5の実習1〜2へ進みます。** 先に背景色の表示・変更・終了を確認し、その後に以下の5-Iへ戻ります。単体の初期化関数は、まだウィンドウから呼ばれていなければ実行確認できません。
 
-コンストラクターのサイズ依存資源の作成も`resize()`経由へまとめます。初回の判定には初期値0の`width_`を使えます。バックバッファへの余分な参照をメンバーに残すと、`ResizeBuffers`が失敗する原因になります。
+#### 実習5：深度とサイズ変更を扱う（課題5-I：コピー可）
 
-**応用課題：** 新しい深度画像に古い幅を使った場合、何と何が不一致になりますか。サイズ変更直後の`viewport_`と幅・高さをデバッガで確認してください。
+深度バッファは、各ピクセルでどの物体が手前かを判断するための画像です。ウィンドウサイズが変われば、描画先や深度画像の大きさも合わせます。ここは完成例を使い、「サイズ変更時に古い参照を外して作り直す」「描画時に深度を設定・クリアする」の二点を押さえます。全フィールドを資料なしで埋める課題はありません。
 
-#### 実習6：カメラと座標変換を理解する
+**差し込み例：** 5-Gで書いたcreateSizeDependentResources()の末尾へ追加します。既存のバックバッファ取得・ビュー作成・viewport_の設定は残してください。
+
+```cpp
+D3D11_TEXTURE2D_DESC depthDescription{};
+depthDescription.Width = width;
+depthDescription.Height = height;
+depthDescription.MipLevels = 1;
+depthDescription.ArraySize = 1;
+depthDescription.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+depthDescription.SampleDesc.Count = 1;
+depthDescription.Usage = D3D11_USAGE_DEFAULT;
+depthDescription.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+throwIfFailed(device_->CreateTexture2D(&depthDescription, nullptr, depthTexture_.GetAddressOf()), "Create depth texture");
+throwIfFailed(device_->CreateDepthStencilView(depthTexture_.Get(), nullptr, depthStencilView_.GetAddressOf()), "Create depth view");
+```
+
+**完成例：** Renderer.cppのnamespace sil::renderer内へresize()を追加します。メッセージから直接呼ばず、5.5のメインループから呼ぶ形にします。
+
+```cpp
+void Renderer::resize(std::uint32_t width, std::uint32_t height)
+{
+    width_ = width;
+    height_ = height;
+    if (width == 0 || height == 0) {
+        return;
+    }
+
+    if (renderTargetView_) {
+        context_->OMSetRenderTargets(0, nullptr, nullptr);
+        renderTargetView_.Reset();
+        depthStencilView_.Reset();
+        depthTexture_.Reset();
+        throwIfFailed(swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0), "ResizeBuffers");
+    }
+    createSizeDependentResources(width, height);
+}
+```
+
+**置換：** 最初の実行用に追加したコンストラクターを、次へ置き換えます。二つ定義しないでください。
+
+```cpp
+Renderer::Renderer(HWND window, std::uint32_t width, std::uint32_t height)
+{
+    createDeviceAndSwapChain(window);
+    resize(width, height);
+}
+```
+
+**差し替え：** render()内のOMSetRenderTargetsの第3引数を深度ビューへ変更し、背景色のクリアの隣に深度のクリアを追加します。viewsは5-Hで作った1要素の配列です。GetAddressOf()で書いている場合も、第3引数だけ同様に変更できます。
+
+```cpp
+context_->OMSetRenderTargets(1, views, depthStencilView_.Get());
+context_->ClearDepthStencilView(depthStencilView_.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0F, 0);
+```
+
+D3D11の既定の深度判定を使います。深度を毎フレーム1.0へ戻し、手前の図形を優先して書き込みます。背景色のクリア・viewport_の設定・幅と高さのガードは残してください。
+
+**必須確認は一つ：** サイズ変更・最小化・復帰を行い、背景表示へ戻れることを確かめます。深度の前後関係は、図形を出した後に5-K〜5-Lとまとめて確認します。バックバッファをComPtrのメンバーへ追加保存するとResizeBuffersを妨げるため、5-GのbackBufferはローカル変数のままにします。
+
+
+
+#### 実習6：カメラと座標変換を理解する（課題5-J：自分で書く）
+
+ここからはゲームの見せ方によって変わる部分です。APIの名前や行列の型は資料を使って構いません。カメラの位置・注視点・画角を選び、数値と表示の関係を考えることに時間を使います。予想は口頭や頭の中で行えばよく、解答ノートは不要です。
 
 | 変換 | 問い | 主な関数 |
 | --- | --- | --- |
@@ -945,23 +1023,23 @@ throwIfFailed(swapChain_->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf())),
 
 行列の掛け算は順序を入れ替えられません。本章のDirectXMathとDirectXTKの組み合わせでは、`Scaling * Translation`で、形状を拡大してから所定の位置へ移します。行列の要素を暗記するより、数値を一つずつ変えて結果を確認してください。
 
-#### 実習7：直方体からステージへ広げる
+#### 実習7：直方体からステージへ広げる（課題5-K・5-L：自分で書く）
 
-DirectXTKの`GeometricPrimitive`は形状と描画処理をまとめたクラスです。コンストラクターでデバイス作成後に図形を作り、毎フレームは使い回します。
+DirectXTKの`GeometricPrimitive`は形状と描画処理をまとめたクラスです。生成部分はコピー可です。5-Iのコンストラクターで`resize(width, height);`の直後に次を追加し、毎フレームは使い回します。render()の中で生成し直しません。
 
 ```cpp
-// 初めて使うライブラリの呼び出し例。直方体の描画全体の解答ではない。
 cube_ = DirectX::GeometricPrimitive::CreateCube(context_.Get(), 1.0F, false);
+sphere_ = DirectX::GeometricPrimitive::CreateSphere(context_.Get(), 1.0F, 24, false);
 ```
 
-引数はコンテキスト、一辺の長さ、右手系で生成するかです。`false`で本章の左手系へ合わせます。球は`CreateSphere(context, diameter, tessellation, rhcoords)`で作ります。直径`1.0F`、分割数`24`、右手系指定`false`を使ってください。
+立方体の引数はコンテキスト、一辺の長さ、右手系で生成するかです。球はコンテキスト、直径、分割数、右手系で生成するかです。`false`で本章の左手系へ合わせます。基準の形はどちらも大きさ1で作り、実際の大きさは描画時の拡大で決めます。
 
 描画呼び出しは`cube_->Draw(world, view, projection, color)`です。色は`DirectX::Colors::SlateGray`などを使えます。
 
-**課題5-K：** まず幅2、高さ1、奥行き2の直方体を、中心`(0, 0.5, 0)`へ描いてください。次に、これを汎用の補助関数へまとめます。
+**課題5-K：** まず幅2、高さ1、奥行き2の直方体を、中心`(0, 0.5, 0)`へ描いてください。render()の背景・深度のクリアより後へ描画を追加します。表示できたworld行列の計算を、下の補助関数へ移して使い回します。二通りの実装を残す課題ではありません。
 
 ```cpp
-// Renderer.cppの無名名前空間に置く骨組み。FXMATRIX等は行列引数用の型。
+// Renderer.cppの無名名前空間へ置く。引数の型はそのまま使ってよい。
 void drawRect(DirectX::GeometricPrimitive& cube, const sil::Rect& rect,
               float centerY, float height, DirectX::FXMVECTOR color,
               DirectX::FXMMATRIX view, DirectX::FXMMATRIX projection) {
@@ -986,7 +1064,7 @@ void drawRect(DirectX::GeometricPrimitive& cube, const sil::Rect& rect,
 
 </details>
 
-**課題5-L：応用部分は自分で書く。** 次の表を仕様として、`render()`の残りを実装してください。ここには完成コードを置きません。
+**課題5-L：応用部分は自分で書く。** 次の表を仕様として、`render()`の残りを実装してください。引数名を省略していた場合は、定義を`render(const Stage& stage, const State& state)`へ戻します。床・ゴール・壁・障害物には同じdrawRect()を使い、物体ごとに別の描画クラスを作る必要はありません。
 
 | 対象 | 読むデータ | 描画の条件 |
 | --- | --- | --- |
@@ -1002,199 +1080,334 @@ void drawRect(DirectX::GeometricPrimitive& cube, const sil::Rect& rect,
 
 ### 5.5 Windowsの入口、入力、固定時間更新
 
-Direct3Dはウィンドウを作りません。Win32が作ったウィンドウの`HWND`を受け取って描画します。この節の前半だけを先に書けば、第5.4節の背景色を検証できます。
+この節は「Win32の基盤をコピーする」「ゲームへつなぐ二つの関数を自分で書く」に分けます。入口、メッセージの配送、ウィンドウへの状態の受け渡しを空欄から組み立てる課題はありません。
 
-`WindowsMain.cpp`には`<windows.h>`、自分のRendererヘッダー、`core/Simulation.hpp`をincludeします。時間計測には`<chrono>`、時間の上限設定には`<algorithm>`、整数型には`<cstdint>`、例外処理には`<exception>`を追加します。`WindowState`や入力の補助関数は無名名前空間へ置き、入口の`wWinMain`はグローバルスコープへ定義してください。
+#### 実習1〜2：背景色を表示する入口（課題5-M・5-N：コピー可）
 
-#### 実習1：Win32の名前を読む
+**完成例：src/app/WindowsMain.cpp。** 現在の空のmain()を含む内容を、このファイルに限って置き換えられます。既存のゲーム用入力や更新を実装済みの場合は、下の二つの関数へ移してください。Renderer.hppのパスは現在のsrc/renderer/directX11/に合わせています。
 
-| 名前 | 意味と、今回の使い方 |
-| --- | --- |
-| `wWinMain` | Unicode版のWindows GUIアプリの入口。コンソールの`main`に相当 |
-| `WNDCLASSEXW` | メッセージの処理方法などを登録する構造体。「C++のclass」とは別 |
-| `RegisterClassExW` | ウィンドウクラスを登録する。失敗時は0 |
-| `CreateWindowExW` | ウィンドウを作り、HWNDを返す。失敗時は`nullptr` |
-| `ShowWindow` | 作ったウィンドウを表示する |
-| `GetClientRect` | 枠やタイトルバーを除く、描画領域の大きさを取得する |
-| `PeekMessageW` | 待ち続けずにメッセージを取得する。描画ループと共存できる |
-| `DispatchMessageW` | メッセージをウィンドウプロシージャへ送る |
-| `DefWindowProcW` | 自分で扱わないメッセージを既定の処理へ渡す |
-
-`W`付きAPIへは`L"文字列"`を渡します。`HINSTANCE`はアプリのインスタンスを識別するハンドルです。`WPARAM`と`LPARAM`はメッセージの付加情報、`LRESULT`は処理結果、`CALLBACK`と`WINAPI`は呼び出し規約の指定です。独自の型や関数名だと思って読み飛ばさず、まずこの役割を押さえます。
-
-**課題5-M：** `WindowsMain.cpp`に次の二つの関数を定義してください。入口全体の解答は用意しません。以下の手順と表を使って組み立てます。
-
-```cpp
-LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand);
-```
-
-最初の`windowProcedure`は`WM_CLOSE`で`DestroyWindow(window)`、`WM_DESTROY`で`PostQuitMessage(0)`を呼び、それぞれ0を返します。それ以外は`DefWindowProcW(window, message, wParam, lParam)`へ渡します。`WM_QUIT`はこの関数へ配送されず、後述のメッセージループで扱います。
-
-`wWinMain`は次の順序で書きます。
-
-1. `constexpr wchar_t className[]`に固有のクラス名を用意する。
-2. `WNDCLASSEXW`をゼロ初期化し、`cbSize`に自身の`sizeof`、`hInstance`に`instance`、`lpszClassName`にクラス名、`lpfnWndProc`に上の関数を設定する。`hCursor`は`LoadCursorW(nullptr, IDC_ARROW)`、背景ブラシはnullptrとする。
-3. `RegisterClassExW`へ構造体のアドレスを渡す。失敗なら`GetLastError()`の値を記録して終了する。
-4. `CreateWindowExW`でウィンドウを作る。初期ウィンドウサイズは1280×720を使い、失敗を確認する。
-5. `ShowWindow(window, showCommand)`で表示する。
-6. `GetClientRect`で実際の描画領域を測り、その幅と高さでRendererを構築する。
+コピー前に5.6のCMake、5-H直後のコンストラクターを接続します。初回はゲームを進めない二つの仮関数を使います。render()もまだ背景色だけにし、以後はこのファイルを丸ごと書き直さず、指定箇所だけ変更します。
 
 <details>
-<summary>ヒント：引数の多いCreateWindowExWを分けて読む</summary>
-
-順番は、拡張スタイル`0`、登録したクラス名、タイトル`L"sphere is learning"`、スタイル`WS_OVERLAPPEDWINDOW`、XとY（各`CW_USEDEFAULT`）、幅と高さ、親ウィンドウ`nullptr`、メニュー`nullptr`、`instance`、追加データ（最初は`nullptr`）です。指定した1280×720は枠を含むため、Rendererには必ずGetClientRectの結果を渡します。
-
-</details>
-
-#### 実習2：メッセージと描画を繰り返す
-
-メッセージ処理は、OSから「閉じる」「サイズが変わった」などの通知を受け取る処理です。ゲームの更新関数とは別です。
-
-**課題5-N：** `bool running = true`とループを用意し、次の順序をC++で実装してください。まだEnvironmentは不要です。
-
-```text
-runningの間：
-    キューにメッセージがある間、PeekMessageW(..., PM_REMOVE)で取り出す
-        WM_QUITならrunningをfalseにし、そのメッセージは配送しない
-        それ以外はTranslateMessageとDispatchMessageWへ渡す
-    runningがfalseならループを抜ける
-    renderer.render(...)で背景をクリアする
-    renderer.present()で表示する
-```
-
-`MSG message{}`を受信先にし、`PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)`を使います。`TranslateMessage`は文字入力メッセージの生成を助けます。`WM_QUIT`の検出後は、そのフレームの描画へ進まないでください。
-
-この段階で`render(const Stage&, const State&)`へ渡す値には、`makeStage()`で作ったStageと値初期化したStateを使えます。まだ中身は描画に使いません。`render()`の引数を何度も変更する必要はありません。
-
-Rendererの構築とループを`try`で囲み、`std::exception`を捕まえて`MessageBoxA(window, error.what(), "Rendering error", MB_OK | MB_ICONERROR)`などで通知してください。終了コードは失敗時1、正常時0です。`GetLastError`はWin32の失敗直後に確認する情報で、Direct3DのHRESULTとは別物です。
-
-**ここで背景色の表示・変更・閉じる操作を確認します。** 最初の確認後、最終版のサイズ変更と一時停止に必要な状態を追加してください。
-
-#### 実習3：通知を状態へ変換する
-
-アプリが使う`WindowState`構造体を作ります。次の項目を持たせてください。
-
-| メンバー | 初期値・意味 |
-| --- | --- |
-| `width`、`height` | 1280、720。描画領域の幅と高さ |
-| `resizePending` | false。メインループで資源を作り直す印 |
-| `minimized` | false。最小化中か |
-| `hasFocus` | true。アプリがアクティブか |
-| `resetClock` | false。復帰後に停止時間を加算しないための印 |
-
-ウィンドウプロシージャへ渡すアプリ状態は、`GWLP_USERDATA`というウィンドウごとの保存場所を使います。これは初見のWin32手続きなので、接続部分だけを参考に示します。グローバルなRendererを作る代わりに状態を渡します。
+<summary>コピー用：WindowsMain.cppの基盤（Win32の細部は読み飛ばしてよい）</summary>
 
 ```cpp
-// windowProcedureの先頭。
-auto* state = reinterpret_cast<WindowState*>(GetWindowLongPtrW(window, GWLP_USERDATA));
-// switch内。CreateWindowExWの最後の引数を&windowStateへ変更して使う。
-case WM_NCCREATE: {
-    const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
-    SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create->lpCreateParams));
-    return TRUE;
-}
-```
+#include <windows.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <exception>
+#include <stdexcept>
+#include <string>
+#include "core/Simulation.hpp"
+#include "renderer/directX11/Renderer.hpp"
 
-`WindowState windowState`は`CreateWindowExW`の前に作り、ウィンドウが生きている間は存続させます。生成途中にもメッセージが来るので、`state`がnullptrの可能性を確認してください。
+namespace {
+struct WindowState {
+    std::uint32_t width = 1280;
+    std::uint32_t height = 720;
+    bool resizePending = false;
+    bool minimized = false;
+    bool hasFocus = true;
+    bool resetClock = false;
+};
 
-**課題5-O：** 次のメッセージ処理を自分で追加してください。
+// Rendererより後までウィンドウを生かし、例外時にも閉じる。
+struct WindowLifetime {
+    HWND window;
+    ~WindowLifetime() {
+        if (IsWindow(window)) {
+            DestroyWindow(window);
+        }
+    }
+};
 
-- `WM_SIZE`：`wParam == SIZE_MINIMIZED`を判定する。`LOWORD(lParam)`が幅、`HIWORD(lParam)`が高さ。最小化中以外は`resizePending`を立て、`resetClock`も立てる。
-- `WM_ACTIVATEAPP`：`wParam != FALSE`を`hasFocus`へ保存し、`resetClock`を立てる。
-- メインループ：保留されたサイズ変更を`renderer.resize()`へ渡して印を戻す。最小化中や非アクティブ時は更新・描画を休み、`Sleep(10)`などで空回りを避ける。
-
-作成直後は`GetClientRect`の値で状態を更新し、`resizePending`をfalseへ戻します。メッセージ内でGPU資源を直接作り直さず、メインループへ依頼する形にしてください。
-
-#### 実習4：WASDから既存の行動へ変換する
-
-`GetAsyncKeyState(key)`の戻り値の上位ビット`0x8000`は、現在押されていることを表します。押した出来事である`WM_KEYDOWN`とは用途が異なります。
-
-**課題5-P：** `bool isKeyDown(int key)`を書き、次の空欄を埋めてください。`sil::direcFromAxes`は既存コアにある関数です。
-
-```cpp
+// 5-Pで本体を置き換える。
 sil::Direc readAction() {
-#error 相反するキーが軸ごとに打ち消される入力を書く
-    // TODO: horizontal = Dの押下値 - Aの押下値
-    // TODO: vertical   = Wの押下値 - Sの押下値
-    // TODO: 既存関数で二つの軸を9行動へ変換して返す。
+    return sil::Direc::Stop;
+}
+
+// 5-Qで引数名と本体を補う。今は何もしないので背景確認に使える。
+void advanceGame(sil::Environment&, sil::Direc, sil::GameState&, std::uint32_t) {
+}
+
+LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    auto* state = reinterpret_cast<WindowState*>(GetWindowLongPtrW(window, GWLP_USERDATA));
+    switch (message) {
+    case WM_NCCREATE: {
+        const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+        SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create->lpCreateParams));
+        return TRUE;
+    }
+    case WM_SIZE:
+        if (state) {
+            state->width = LOWORD(lParam);
+            state->height = HIWORD(lParam);
+            state->minimized = wParam == SIZE_MINIMIZED;
+            state->resizePending = !state->minimized;
+            state->resetClock = true;
+        }
+        return 0;
+    case WM_ACTIVATEAPP:
+        if (state) {
+            state->hasFocus = wParam != FALSE;
+            state->resetClock = true;
+        }
+        return 0;
+    case WM_CLOSE:
+        DestroyWindow(window);
+        return 0;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    }
+    return DefWindowProcW(window, message, wParam, lParam);
+}
+}
+
+int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
+{
+    HWND window = nullptr;
+    try {
+        constexpr wchar_t className[] = L"SphereIsLearningWindow";
+        WNDCLASSEXW windowClass{};
+        windowClass.cbSize = sizeof(windowClass);
+        windowClass.hInstance = instance;
+        windowClass.lpszClassName = className;
+        windowClass.lpfnWndProc = windowProcedure;
+        windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        if (!RegisterClassExW(&windowClass)) {
+            const DWORD error = GetLastError();
+            throw std::runtime_error("RegisterClassExW: " + std::to_string(error));
+        }
+
+        WindowState windowState;
+        window = CreateWindowExW(0, className, L"sphere is learning", WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, nullptr, nullptr, instance, &windowState);
+        if (!window) {
+            const DWORD error = GetLastError();
+            throw std::runtime_error("CreateWindowExW: " + std::to_string(error));
+        }
+        WindowLifetime windowLifetime{window};
+
+        RECT client{};
+        if (!GetClientRect(window, &client)) {
+            const DWORD error = GetLastError();
+            throw std::runtime_error("GetClientRect: " + std::to_string(error));
+        }
+        windowState.width = static_cast<std::uint32_t>(client.right - client.left);
+        windowState.height = static_cast<std::uint32_t>(client.bottom - client.top);
+        windowState.resizePending = false;
+        sil::renderer::Renderer renderer(window, windowState.width, windowState.height);
+
+        constexpr std::uint32_t initialSeed = 42;
+        sil::Environment env{sil::makeStage()};
+        env.reset(initialSeed);
+        sil::GameState lastEnd = sil::GameState::Running;
+        using Clock = std::chrono::steady_clock;
+        auto previousTime = Clock::now();
+        double accumulator = 0.0;
+        bool running = true;
+        ShowWindow(window, showCommand);
+
+        while (running) {
+            MSG message{};
+            while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
+                if (message.message == WM_QUIT) {
+                    running = false;
+                    break;
+                }
+                TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+            if (!running) {
+                break;
+            }
+
+            // 5-Iに進んだら、この位置へ保留中のサイズ変更処理を追加する。
+            const auto now = Clock::now();
+            if (windowState.resetClock || windowState.minimized || !windowState.hasFocus) {
+                previousTime = now;
+                accumulator = 0.0;
+                windowState.resetClock = false;
+            }
+            if (windowState.minimized || !windowState.hasFocus) {
+                Sleep(10);
+                continue;
+            }
+            const double elapsed = std::min(std::chrono::duration<double>(now - previousTime).count(), 0.25);
+            previousTime = now;
+
+            // GUIを追加するときは、この位置でNewFrameとUI作成を行う。
+            accumulator += elapsed;
+            while (accumulator >= sil::Environment::dt) {
+                advanceGame(env, readAction(), lastEnd, initialSeed);
+                accumulator -= sil::Environment::dt;
+            }
+
+            renderer.render(env.stage(), env.state());
+            // GUIを追加するときは、この位置でGUIを描画する。
+            renderer.present();
+        }
+    } catch (const std::exception& error) {
+        MessageBoxA(nullptr, error.what(), "sphere is learning", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
 }
 ```
 
-**応用確認：** Wのみ、W+D、W+S、W+A+Sを押した場合の軸と行動を、実行前に表へ書いてください。斜め移動の速度補正はシミュレーション側に残します。AIから斜め行動を渡した場合にも同じ規則が適用されるためです。
-
-#### 実習5：描画の速さからゲーム時間を独立させる
-
-固定更新には`std::chrono::steady_clock`を使います。`now - previousTime`を`std::chrono::duration<double>`へ変換して`count()`を呼ぶと、秒数を得られます。`accumulator`は、次の1ステップに足りない時間を持ち越す変数です。
-
-**課題5-Q：** `sil::Environment env{sil::makeStage()}`、固定の`initialSeed`、終了結果用の`lastEnd`、`accumulator = 0.0`、前回時刻を用意し、次の設計をコードにしてください。
-
-```text
-各フレームでメッセージとサイズ変更を処理する
-nowを取得する
-resetClockが立っていたら、前回時刻をnowにし、蓄積時間を0へ戻す
-最小化中または非アクティブなら、同様に時計をリセットして休む
-elapsed = 前回からの秒数（上限0.25秒）
-前回時刻 = now
-accumulatorへelapsedを加算する
-accumulator >= Environment::dt の間：
-    入力から行動を得てenv.step()を1回呼ぶ
-    終了なら結果をlastEndへ保存してからenv.reset(initialSeed)
-    accumulatorからdtを引く
-renderer.render(env.stage(), env.state())
-renderer.present()
-```
-
-既存コアでは`lastEnd`の型は`sil::GameState`、更新結果は`result.end`です。終了時も待たずにリセットし、直前の結果は別変数に保持してください。`if`で1回だけ更新するループでは、描画が遅いとゲームも遅くなります。
-
-<details>
-<summary>ヒント：時間の計算だけ確認する</summary>
-
-`std::min(std::chrono::duration<double>(now - previousTime).count(), 0.25)`で上限を付けられます。停止中は`previousTime = now`と`accumulator = 0.0`の両方が必要です。`resetClock`も処理後にfalseへ戻します。
-
 </details>
 
-**机上課題：** dtが1/60秒、accumulatorが0なら、1/120秒が経過したとき更新は何回ですか。次のフレームでも1/120秒が経過したら何回になりますか。実時間0.25秒超の切り捨ては大量更新を避ける教材上の方針であり、その場合は現実の時計よりゲーム内時間が遅れます。
+**ここで一度だけ実行します。** 背景色が出る・色を変えられる・閉じられる、の三点を確認します。ゲームが動かないのは仮関数のためです。初期版ではサイズ変更の反映もまだ行いません。
 
-**実機確認：** 描画の負荷を変えても通常時の移動速度が大きく変わらないこと、フォーカスを外して戻しても即座に時間切れにならないこと、障害物の現在位置が動くことを確認します。
+入口の各型やCreateWindowExWの全引数は、覚えずに使って構いません。「OSの通知を処理するループがあり、その外で更新と描画を行う」「ウィンドウの実寸をRendererへ渡す」ことを押さえます。WM_QUIT後に描画へ進まない点も残してください。
 
-### 5.6 依存ライブラリとCMakeを接続する
+#### 実習3：サイズ変更と一時停止（課題5-O：コピー可）
 
-ここは第5.4節をビルドする前に準備します。既存のCMakeを丸ごと上書きせず、第1章のターゲット分離と照合してください。ソースの所属を間違えると、複数の入口関数やWindowsヘッダーの混入によるエラーになります。
+先に5-Iのresize()と深度処理を追加します。その後、上のコメント「保留中のサイズ変更処理」の位置へ、次を追加します。
 
-- `sphere_core`にはシミュレーションの実装だけを入れる。
-- `sphere_headless`と`sphere_tests`は、それぞれ自分の入口とcoreを使う。
-- `sphere_game`に`WindowsMain.cpp`とRendererを入れる。
-- `sphere_hello`を残す場合、その入口は`Hello.cpp`だけにする。
-- テストファイルがない場合は、テストが実行できた扱いにしない。
+```cpp
+if (windowState.resizePending && !windowState.minimized) {
+    renderer.resize(windowState.width, windowState.height);
+    windowState.resizePending = false;
+}
+```
 
-DirectXTKとImGuiは、このリポジトリでは既にsubmoduleとして登録されています。`git submodule add`を重ねず、プロジェクト根で`git submodule update --init --recursive`を実行します。GUIのコードは第5.7節まで使いません。
+WM_SIZEやWM_ACTIVATEAPPの受け取り、最小化・非アクティブ中の休止は完成例に入っています。自力で書き直す必要はありません。止まっていた時間をゲームへ一度に加算しないよう、復帰時にpreviousTimeとaccumulatorの両方を戻していることだけ確認します。
 
-**課題5-R：** 次の骨組みを完成させてください。これは未完成のCMakeです。`message(FATAL_ERROR ...)`は必要な箇所を埋めてから削除します。
+**確認：** サイズ変更、最小化から復帰、別アプリから復帰を一度ずつ行います。背景色と、図形追加後の画面が復帰すれば次へ進みます。
+
+#### 実習4：WASDから既存の行動へ変換する（課題5-P：自分で書く）
+
+キーを調べるWin32の書き方は、そのままコピーします。WindowsMain.cppの無名名前空間へ追加します。
+
+```cpp
+bool isKeyDown(int key) {
+    return (GetAsyncKeyState(key) & 0x8000) != 0;
+}
+```
+
+これは「今押されているか」をboolで返します。押した瞬間の通知とは用途が違います。0x8000というビットの暗記は不要です。
+
+**自分で書く範囲：** 既にあるreadAction()の本体だけを変更します。
+
+- horizontalはDの押下値からAの押下値を引く。
+- verticalはWの押下値からSの押下値を引く。
+- sil::direcFromAxes(horizontal, vertical)を返す。
+
+boolは整数の計算ではfalseが0、trueが1として使えます。分かりにくければ static_cast<int>(isKeyDown('D')) のように明示して構いません。反対キーの同時押しを相殺する処理は自分で組み立てます。斜め速度の補正はシミュレーション側に残します。
+
+**確認は実行でまとめる：** 5-Qを終えてから、W、W+D、W+Sでそれぞれ前進、斜め移動、停止になることを確かめます。別の解答表の作成は不要です。
+
+#### 実習5：ゲームの1ステップと再開（課題5-Q：理解して使う＋自分で書く）
+
+時計の読み取り、accumulatorへの加算、dtごとのwhileループは完成例を使います。固定更新の仕組み自体はゲームにもAIにも重要なので、次の流れを読んで理解します。
+
+```text
+現実に経過した時間をaccumulatorへ加える
+    → dt以上たまっている間、ゲームを1回更新してdtを引く
+    → 余りの時間は次のフレームへ持ち越す
+    → 更新後の状態を1回描画する
+```
+
+描画が速ければ更新0回、遅ければ複数回になる場合があります。whileをifへ変えると、遅い描画にゲーム速度が引きずられます。この意味は押さえますが、chronoの型や定型コードをゼロから再実装する必要はありません。elapsedの0.25秒上限は大量更新を避けるための方針で、その上限を超える停止では現実よりゲーム内時間が遅れます。
+
+**自分で書く範囲：** 仮のadvanceGame()だけを、次の引数名付きの形へ置き換えます。本体は数行です。既存の更新ループは変更しません。
+
+```cpp
+void advanceGame(sil::Environment& env, sil::Direc action,
+                 sil::GameState& lastEnd, std::uint32_t initialSeed)
+{
+    // TODO: env.step(action)の結果を受け取る。
+    // TODO: result.endがsil::GameState::Running以外なら、
+    //       lastEndへ終了理由を保存してからenv.reset(initialSeed)する。
+}
+```
+
+終了理由の保存をreset()より先にする理由、描画からstep()を呼ばない理由は説明できるようにします。キーの代わりにAIの行動を渡せば、同じ更新関数が使える構成です。
+
+後の第8.5節で保存済みAIをつなぐときは、この版では固定更新の中の`advanceGame(...)`呼び出しを、その節の更新・自動再開コードへ置き換えます。両方を呼ぶと二重更新になるので、どちらか一方にします。
+
+**必須確認：** WASDで移動できること、障害物が動くこと、衝突やゴール・時間切れの後に即座に再開することを確認します。通常の描画負荷の変化で移動速度が大きく変わらず、別アプリから戻って即時間切れにならないことも確認します。既に試したサイズ変更の記録を重ねて書く必要はありません。
+
+
+
+### 5.6 依存ライブラリとCMakeを接続する（課題5-R：コピー可）
+
+**最初の実行より前に行います。** 設定を空欄から作る課題はありません。ターゲットに何を入れるかだけ確認し、完成例を使います。
+
+| ターゲット | 所属するもの |
+| --- | --- |
+| sphere_core | シミュレーションだけ。Windowsや描画に依存させない |
+| sphere_headless | ヘッドレス用の入口とcore |
+| sphere_tests | テスト用の入口とcore |
+| sphere_game | Windows用の入口、Renderer、描画ライブラリ |
+| sphere_hello（残す場合） | Hello.cppだけ |
+
+**現在のCMakeを整理するための完成例：CMakeLists.txt。** この教材範囲の最小構成です。既に独自ターゲットや設定を追加している場合は、それらを消さずに上の所属へ合わせます。各ターゲットへ全cppを追加しないでください。入口が重複し、ヘッドレスにも描画依存が混ざるためです。描画パスは現在のsrc/renderer/directX11/です。ファイル移動は不要です。
 
 ```cmake
+cmake_minimum_required(VERSION 3.24)
+project(SphereIsLearning LANGUAGES CXX)
+
+add_library(sphere_core src/core/Simulation.cpp)
+target_include_directories(sphere_core PUBLIC src)
+target_compile_features(sphere_core PUBLIC cxx_std_20)
+if(MSVC)
+    target_compile_options(sphere_core PRIVATE /W4 /permissive- /utf-8)
+else()
+    target_compile_options(sphere_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(sphere_headless src/app/HeadlessMain.cpp)
+target_link_libraries(sphere_headless PRIVATE sphere_core)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/app/Hello.cpp")
+    add_executable(sphere_hello src/app/Hello.cpp)
+    target_compile_features(sphere_hello PRIVATE cxx_std_20)
+endif()
+
+option(BUILD_TESTING "Build the tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/SimulationTests.cpp")
+        add_executable(sphere_tests tests/SimulationTests.cpp)
+        target_link_libraries(sphere_tests PRIVATE sphere_core)
+        add_test(NAME simulation COMMAND sphere_tests)
+    else()
+        message(STATUS "Simulation tests are not implemented yet")
+    endif()
+endif()
+
 if(WIN32)
     set(BUILD_TOOLS OFF CACHE BOOL "Build DirectXTK auxiliary tools" FORCE)
     set(BUILD_XAUDIO_WIN8 OFF CACHE BOOL "Build DirectXTK audio" FORCE)
     add_subdirectory(external/DirectXTK)
 
-    message(FATAL_ERROR "課題5-R: ソースとリンク先を自分の配置で定義する")
-    # TODO: add_executable(sphere_game WIN32 ...)で描画アプリのソースを指定。
-    # TODO: include先src、コンパイル定義、リンク先を指定。
-    # TODO: MSVCの場合だけ/W4と/utf-8を設定。
+    add_executable(sphere_game WIN32
+        src/app/WindowsMain.cpp
+        src/renderer/directX11/Renderer.cpp
+        src/renderer/directX11/Renderer.hpp)
+    target_include_directories(sphere_game PRIVATE src)
+    target_compile_definitions(sphere_game PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+    target_link_libraries(sphere_game PRIVATE sphere_core DirectXTK user32 d3d11 dxgi)
+    if(MSVC)
+        target_compile_options(sphere_game PRIVATE /W4 /permissive- /utf-8)
+    endif()
 endif()
 ```
 
-必要なコンパイル定義は`WIN32_LEAN_AND_MEAN`、`NOMINMAX`、`UNICODE`、`_UNICODE`です。前二つはWindowsヘッダーの範囲を絞ることと、`min`/`max`マクロの干渉防止、後二つはUnicode設定です。リンク先は`PRIVATE`で`sphere_core`、`DirectXTK`、`user32`、`d3d11`、`dxgi`を指定します。`add_subdirectory`で取り込んだターゲット名は`DirectXTK`です。
+テストの条件分岐は、未実装でも構成できるためのものです。未実装のテストが成功した扱いにはしません。
 
-<details>
-<summary>ヒント：第1章のCMakeから応用する</summary>
+登録済みのDirectXTK・ImGui submoduleを取得します。git submodule addを重ねる必要はありません。
 
-ソースは`src/app/WindowsMain.cpp`と、選んだ場所の`Renderer.cpp`（必要なら`.hpp`も）です。`target_include_directories`、`target_compile_definitions`、`target_link_libraries`を使ってください。`if(WIN32)`はWindowsでだけ構成する条件、`add_executable`の`WIN32`はGUIの入口を選ぶ指定です。MSVC固有オプションは別途`if(MSVC)`で囲みます。
+```powershell
+git submodule update --init --recursive
+```
 
-</details>
-
-この章の演習は既存のWindows用`build/`と混ぜず、新しい`build-workbook/`を使います。ローカルの除外設定`.git/info/exclude`に`/build-workbook/`を追記し、生成物をコミットしないようにしてください。Visual StudioのDeveloper PowerShellでプロジェクト根から実行します。
+Visual StudioのDeveloper PowerShellで、プロジェクト根から以下を実行します。既存のbuild/と混ぜず、build-workbook/を使います。ローカルの.git/info/excludeに /build-workbook/ を一度追加し、生成物をコミット対象から外します。Visual Studioから開く場合はルートのCMakeLists.txtがあるフォルダーを開き、構成を更新してsphere_gameを起動対象にします。
 
 ```powershell
 cmake -S . -B build-workbook -A x64
@@ -1202,142 +1415,250 @@ cmake --build build-workbook --config Debug --target sphere_game
 .\build-workbook\Debug\sphere_game.exe
 ```
 
-**確認：** ヘッダーが見つからないエラー、リンク時の未解決シンボル、実行時のHRESULT失敗を区別し、それぞれどこを調べるかを書いてください。core、ヘッドレス、実装済みテストも別にビルドして、描画の依存が混入していないか確認します。
+「ヘッダーが見つからない」はinclude先、「未解決シンボル」は定義やリンク先、「起動後のHRESULT失敗」は実行時の設定を調べます。全APIの調査ノートは不要です。Debugレイヤー不足ならWindowsのオプション機能Graphics Toolsを確認します。
+
+ゲームが動いた区切りで、sphere_headlessと実装済みのsphere_testsもビルド・実行します。描画準備のたびに同じ確認を重ねる必要はありません。
+
+
 
 ### 5.7 Dear ImGuiで操作画面を作る
 
-3Dと手動操作を確認してから取り組みます。ImGuiは毎フレームの関数呼び出しでUIを記述するライブラリです。Win32バックエンドが入力など、DX11バックエンドが描画などを担当します。
+手動操作が動いてから追加します。バックエンドの接続と後始末はコピーし、開始・停止・表示内容だけ自分で書きます。順序は「UI作成 → ゲーム更新 → 3D描画 → GUI描画 → Present」です。
 
-#### 実習1：依存関係と寿命
+#### 実習1：ビルドと寿命（課題5-S：コピー可）
 
-**課題5-S：** `if(WIN32)`内に`sil_imgui`というSTATICライブラリを作り、次の6ファイルを追加してください。CMakeの書き方は第5-Rの応用です。
+**差し込み例：** 5.6のif(WIN32)内、sphere_gameの定義後へ追加します。既存のImGui submoduleとWindowsのシステムライブラリを使います。
 
-```text
-external/imgui/imgui.cpp
-external/imgui/imgui_draw.cpp
-external/imgui/imgui_tables.cpp
-external/imgui/imgui_widgets.cpp
-external/imgui/backends/imgui_impl_win32.cpp
-external/imgui/backends/imgui_impl_dx11.cpp
+```cmake
+add_library(sil_imgui STATIC
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_tables.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/backends/imgui_impl_win32.cpp
+    external/imgui/backends/imgui_impl_dx11.cpp)
+target_include_directories(sil_imgui PUBLIC external/imgui)
+target_compile_definitions(sil_imgui PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+target_link_libraries(sil_imgui PRIVATE d3d11 dxgi d3dcompiler dwmapi user32 gdi32 imm32)
+target_link_libraries(sphere_game PRIVATE sil_imgui)
+target_compile_definitions(sphere_game PRIVATE SIL_WITH_IMGUI=1)
 ```
 
-`external/imgui`をPUBLICなinclude先にし、DX11の必要なリンク先を設定し、`sphere_game`から`sil_imgui`へリンクします。`sphere_game`に`SIL_WITH_IMGUI=1`の定義を追加します。`<imgui.h>`、`<backends/imgui_impl_win32.h>`、`<backends/imgui_impl_dx11.h>`をincludeします。本体と両バックエンドは同じsubmoduleリビジョンを使います。
+WindowsMain.cppのinclude群へ追加します。本体とバックエンドは同じsubmoduleの版を使います。
 
-| 時点 | 呼ぶ関数と注意 |
-| --- | --- |
-| Renderer作成後 | `IMGUI_CHECKVERSION()`、`ImGui::CreateContext()`、`ImGui::StyleColorsDark()` |
-| 入力側の初期化 | `ImGui_ImplWin32_Init(window)`。boolの成功を確認 |
-| 描画側の初期化 | `ImGui_ImplDX11_Init(renderer.device(), renderer.context())`。boolの成功を確認 |
-| 各フレーム開始 | `ImGui_ImplDX11_NewFrame()`、`ImGui_ImplWin32_NewFrame()`、`ImGui::NewFrame()` |
-| UI定義後 | `ImGui::Render()`で描画データを確定 |
-| 3D描画後、Present前 | `ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData())` |
-| Renderer破棄前 | `ImGui_ImplDX11_Shutdown()`、`ImGui_ImplWin32_Shutdown()`、`ImGui::DestroyContext()` |
+```cpp
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
+#include <backends/imgui_impl_dx11.h>
+```
 
-**設計課題：** 初期化済みの資源だけを逆順に終了する小さなRAIIクラスを考えてください。途中のInitに失敗してコンストラクターが例外を投げる場合、未完成オブジェクトのデストラクターは呼ばれません。初期化途中の後始末も必要です。まず正常終了、次に途中失敗で、どの終了処理が必要か表にしてください。
+WindowStateへ bool imguiReady = false; を追加します。その定義より後、無名名前空間内へ次をコピーします。RAIIクラスの設計を追加課題にはしません。「初期化したものだけ逆順に終了し、Rendererより先に終了する」という役割を押さえます。
 
-#### 実習2：メッセージをバックエンドへ渡す
+```cpp
+class ImGuiSession {
+public:
+    ImGuiSession(HWND window, sil::renderer::Renderer& renderer, WindowState& state)
+        : state_(state)
+    {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        try {
+            ImGui::StyleColorsDark();
+            if (!ImGui_ImplWin32_Init(window)) {
+                throw std::runtime_error("ImGui Win32 initialization failed");
+            }
+            win32Ready_ = true;
+            if (!ImGui_ImplDX11_Init(renderer.device(), renderer.context())) {
+                throw std::runtime_error("ImGui DX11 initialization failed");
+            }
+            dx11Ready_ = true;
+            state_.imguiReady = true;
+        } catch (...) {
+            shutdown();
+            throw;
+        }
+    }
+    ~ImGuiSession() { shutdown(); }
+    ImGuiSession(const ImGuiSession&) = delete;
+    ImGuiSession& operator=(const ImGuiSession&) = delete;
 
-`WindowState`に`imguiReady = false`を追加し、両バックエンドの初期化成功後だけtrueにします。終了処理の前にfalseへ戻します。
+private:
+    void shutdown() {
+        state_.imguiReady = false;
+        if (dx11Ready_) {
+            ImGui_ImplDX11_Shutdown();
+        }
+        if (win32Ready_) {
+            ImGui_ImplWin32_Shutdown();
+        }
+        ImGui::DestroyContext();
+    }
+    WindowState& state_;
+    bool win32Ready_ = false;
+    bool dx11Ready_ = false;
+};
+```
 
-Win32バックエンドのハンドラーは、利用する版のヘッダーで宣言方法を確認してください。利用側の宣言を求める版では、`WindowsMain.cpp`のグローバルスコープに次を置きます。
+wWinMain内のRenderer構築の直後へ追加します。この順序ならスコープを抜ける時にImGuiが先に終了します。終了関数を別の場所から重ねて呼ぶ必要はありません。
+
+```cpp
+ImGuiSession gui(window, renderer, windowState);
+```
+
+#### 実習2：Windows通知とフレームの接続（課題5-T：コピー可）
+
+WindowsMain.cppのグローバルスコープ（無名名前空間より前）へ宣言を追加します。現在のバックエンドヘッダーでは利用側でこの宣言を置く形になっています。
 
 ```cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
     HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 ```
 
-**課題5-T：** `windowProcedure`から、初期化済みの場合だけこの関数へメッセージを渡してください。戻り値が非0なら処理済みとして返せます。作成途中の`WM_NCCREATE`や、アプリが必要とするサイズ・フォーカス状態の処理を失わない順序にしてください。
+windowProcedureのstate取得直後、switchより前へ追加します。
 
-#### 実習3：覚えた操作からUIを組み立てる
+```cpp
+const LRESULT guiHandled = state && state->imguiReady
+    ? ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam)
+    : 0;
+```
 
-| 関数 | 使い方 |
+switchの後、最後のDefWindowProcWを呼ぶ直前へ追加します。既存switchでサイズ・フォーカス・終了の通知を先に処理する順序です。
+
+```cpp
+if (guiHandled) {
+    return guiHandled;
+}
+```
+
+メインループのコメント「この位置でNewFrameとUI作成」へ追加します。最小化・非アクティブ時のcontinueより後です。
+
+```cpp
+ImGui_ImplDX11_NewFrame();
+ImGui_ImplWin32_NewFrame();
+ImGui::NewFrame();
+```
+
+コメント「この位置でGUIを描画」へ追加します。renderer.render()の後、renderer.present()の前です。NewFrameしたフレームは必ずここまで進めます。
+
+```cpp
+ImGui::Render();
+ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+```
+
+#### 実習3：開始・停止・状態表示（課題5-U：自分で書く）
+
+UIがゲームの動作を決める部分です。装飾は増やさず、次の仕様だけ実装します。
+
+- メインループより前に int selectedStage = 0; と bool playing = false; を置く。
+- Stage 1の選択肢と開始ボタンを出す。開始時はenv.reset(initialSeed)、lastEndをRunning、accumulatorを0、playingをtrueへ変更する。
+- プレイ中は選択へ戻るボタンを出す。戻るとplayingをfalseにして更新を止める。
+- 残り時間と直前の終了理由を表示する。自動再開後も終了理由は残す。
+- playingのときだけ更新する。GUIがキーボード入力を使う間は停止行動を渡す。
+
+APIの呼び方は次を参考にしてよく、名前や引数を調べて埋める必要はありません。
+
+| 目的 | 使うコード |
 | --- | --- |
-| `ImGui::Begin("Stage selection")` / `End()` | UIウィンドウの開始と終了。BeginがfalseでもEndは必要 |
-| `RadioButton(label, &selectedStage, 0)` | 整数の選択値を操作する。最初は選択肢が一つでよい |
-| `Button(label)` | そのフレームで押されたらtrue |
-| `Text("Remaining: %.1f s", seconds)` | 書式付き表示 |
-| `ImGui::GetIO().WantCaptureKeyboard` | UIがキーボード入力を必要としているか |
+| ステージの選択肢 | ImGui::RadioButton("Stage 1", &selectedStage, 0); |
+| ボタンの判定 | if (ImGui::Button("Start")) { /* 開始処理 */ } |
+| 残り時間の表示 | ImGui::Text("Remaining: %.1f s", remaining); |
+| 終了理由の表示 | ImGui::Text("Last: %s", sil::StateToStr(lastEnd).c_str()); |
+| GUIの入力要求 | ImGui::GetIO().WantCaptureKeyboard |
 
-**課題5-U：** 以下を仕様に、UIと更新ループを実装してください。表示の配置や文言は自分で決めて構いません。
+**自分で書く範囲：** ImGui::NewFrame()の直後に、次の枠とUIの本体を追加します。remainingは std::max(0, env.stage().maxSteps - env.state().currentStep) * sil::Environment::dt で計算できます。Beginの結果がfalseでもEndは呼びます。
 
-- `int selectedStage = 0`と`bool playing = false`を持つ。起動時にはゲームを進めない。
-- Stage 1の選択肢と開始ボタンを出す。開始時は環境と終了結果を初期化し、蓄積時間を0にする。
-- プレイ中は選択へ戻る操作を出す。戻ると更新を止める。
-- 残り時間は`max(0, (maxSteps - currentStep) * dt)`で求め、直前の終了結果も表示する。
-- `playing`のときだけ`step()`を呼ぶ。終了したら結果を記録して即時リセットし、プレイは続ける。
-- UIがキーボードを使う間は停止行動を渡す。
-- 最小化・非アクティブ時の`continue`より後でNewFrameを始め、開始したフレームは必ずRenderで確定する。
+```cpp
+if (ImGui::Begin("Stage selection")) {
+    // TODO: playingに応じて、選択・開始または選択へ戻る操作を出す。
+    // TODO: 残り時間とlastEndを表示する。
+}
+ImGui::End();
+```
 
-<details>
-<summary>ヒント：UIと描画を順番に並べる</summary>
+更新を止めるための枠組みはコピーできます。既存の accumulator += elapsed; からwhileの終わりまでを、次へ置き換えます。advanceGame()の自動再開処理はそのまま使います。
 
-「フレーム開始 → UI作成と入力取得 → 固定更新 → Rendererの3D描画 → ImGui::Render → ImGuiの描画 → Present」です。`WantCaptureKeyboard`はGetAsyncKeyStateを止める機能ではないので、アプリ側で`sil::Direc::Stop`に差し替えます。画面に出す残り時間は、そのフレームの更新前後のどちらを読んだかも観察してください。
+```cpp
+if (playing) {
+    const auto action = ImGui::GetIO().WantCaptureKeyboard
+        ? sil::Direc::Stop
+        : readAction();
+    accumulator += elapsed;
+    while (accumulator >= sil::Environment::dt) {
+        advanceGame(env, action, lastEnd, initialSeed);
+        accumulator -= sil::Environment::dt;
+    }
+} else {
+    accumulator = 0.0;
+}
+```
 
-</details>
+状態表示はそのフレームの更新前の値です。まずはそれで構いません。WantCaptureKeyboardはGetAsyncKeyStateを無効にしないため、アプリ側で停止行動へ差し替えます。
 
-**確認：** 選択中に障害物が進まないこと、UI操作時に球が動かないこと、自動リセット後も直前の終了理由が読めること、3DとGUIが同じ画面に出ることを確かめます。
+**必須確認：** 選択中は障害物が進まず、開始すると遊べること、選択へ戻ると止まること、GUIがキーボードを使う間は球が動かないこと、終了理由が自動再開後も読めることをまとめて確認します。
+
+
 
 ### 5.8 調べ方と参考資料
 
-API名を見たら、まず「何をするか」「どのオブジェクトの関数か」「入力と出力」「戻り値」「有効な呼び出し時点」を調べます。引数の多い関数は、入力側と出力側に分けてノートへ書いてください。
+初期化の全APIを順番に調査する課題はありません。コピーした基盤は「何をする処理か」「いつ呼ぶか」「失敗したらどこを見るか」が分かれば進めます。必要になった設定と、実際に出たエラーを中心に調べます。
 
-- [Direct3D 11の初期化](https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-initialize)：デバイス、描画先、ビューポート。
-- [D3D11CreateDeviceAndSwapChain](https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-d3d11createdeviceandswapchain)：引数と戻り値。
-- [DirectXTK Getting Started](https://github.com/microsoft/DirectXTK/wiki/Getting-Started)：C++で使う公式教材。
-- [DirectXTK 3D shapes](https://github.com/microsoft/DirectXTK/wiki/3D-shapes)：形状と行列の使い方。
-- [GeometricPrimitive](https://github.com/microsoft/DirectXTK/wiki/GeometricPrimitive)：CreateCube、CreateSphere、Drawの仕様。
-- [Dear ImGuiのWin32・DX11例](https://github.com/ocornut/imgui/blob/master/examples/example_win32_directx11/main.cpp)：初期化・メッセージ・終了の順序。丸ごと移植せず、担当箇所を照合する。
+ゲーム側で変更するAPIは、入力の意味と結果を確認します。例えば座標変換なら「どこへ・どの大きさで置くか」、カメラなら「どこから何を見るか」を先に決め、型や呼び方は例を使います。
 
-**調査課題：** `CreateRenderTargetView`と`OMSetRenderTargets`を調べ、前者はHRESULT、後者はvoidであることを確認してください。「作成」と「命令の設定」の違いも説明します。
+- [Direct3D 11の初期化](https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-initialize)：部品の役割や初期化で困った時。
+- [D3D11CreateDeviceAndSwapChain](https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-d3d11createdeviceandswapchain)：設定変更やHRESULTの確認時。
+- [DirectXTK 3D shapes](https://github.com/microsoft/DirectXTK/wiki/3D-shapes)：図形を描く呼び方。
+- [GeometricPrimitive](https://github.com/microsoft/DirectXTK/wiki/GeometricPrimitive)：形状生成とDrawの仕様。
+- [Dear ImGuiのWin32・DX11例](https://github.com/ocornut/imgui/blob/master/examples/example_win32_directx11/main.cpp)：バックエンド接続で困った時。
+
+COMの詳細、Win32の呼び出し規約、MRT、flip modelの比較、自作シェーダーは後の学習に回せます。本章の合格条件へ追加しません。ポインタ・配列・constも、今回のコードを読んで適切に渡せる範囲から繰り返し使って覚えます。
 
 ### 5.9 この章の完了条件と振り返り
 
-以下は実施する確認であり、本文を書いた時点での成功記録ではありません。
+以下はこれから実施する確認です。コピーした部分も含めて動作を確かめますが、同じ確認を各課題で繰り返す必要はありません。
 
-- [ ] Windows x64で`sphere_game`をビルドし、起動・終了できる。
-- [ ] 背景色、直方体、球体の順に自分で表示した。
-- [ ] デバイス、コンテキスト、画像とビューの違いを説明できる。
-- [ ] 球の大きさ・位置、カメラ、画角を変えて、その効果を説明できる。
-- [ ] 床、壁、動く障害物、ゴール、プレイヤーが適切な前後関係で表示される。
-- [ ] RendererはStageとStateを読むだけで、stepやresetを呼ばない。
-- [ ] WASDの9行動、固定時間更新、終了結果の記録、自動リセットが動く。
-- [ ] サイズ変更、最小化、フォーカス切替から正常に復帰する。
-- [ ] ImGuiで選択・開始・状態表示ができ、入力がゲームと競合しない。
-- [ ] GUIと描画資源の寿命、初期化失敗時の後始末を確認した。
-- [ ] ヘッドレスと実装済みテストが描画依存なしで動く。未実装のテストは別に記録した。
-- [ ] Debugでデバッグレイヤーの警告を調べ、DebugとReleaseで手動操作を確認した。
+- [ ] Windows x64でsphere_gameがビルド・起動・終了でき、背景色を変更できる。
+- [ ] 床・壁・ゴール・動く障害物・プレイヤーが、意図した位置・大きさ・前後関係で表示される。
+- [ ] カメラ・物体の座標変換・入力変換・更新と再開・UIの動作を自分で実装した。
+- [ ] Rendererがゲーム状態を変更せず、WASDの9行動と固定更新・即時の自動再開が働く。
+- [ ] サイズ変更、最小化、フォーカス切替から戻れ、GUIとゲームの入力が競合しない。
+- [ ] 1ステージを選んで開始でき、選択へ戻れ、残り時間と直前の終了理由を確認できる。
+- [ ] Debugで警告やHRESULT失敗を確認し、Debug・Releaseで手動プレイを確認した。
+- [ ] ヘッドレスと実装済みテストが引き続き動く。未実装・未確認はそのまま記録した。
 
-最後に、空のノートへ「Wを押してから、球が画面で動くまで」を、関数名を交えて書いてください。見ずに説明できなかった部分は、対応する実習へ戻ります。
+振り返りは「入力 → step → 更新後のState → 座標変換 → Draw → Present」を、自分のコードを見ながら追えれば十分です。全APIの引数の暗唱や、コピーした基盤の白紙からの再実装は求めません。
 
-この最小構成ではデバイスロストの復旧は扱いません。Presentで`DXGI_ERROR_DEVICE_REMOVED`などが返ったら処理名とコードを確認し、例外として終了させます。自作シェーダー、複雑なモデル、音声は次の学習範囲です。
+この最小構成ではデバイスロストからの自動復旧は扱いません。Presentの失敗コードを確認して例外として終了します。自作シェーダー、複雑なモデル、音声は次の学習範囲です。
 
-### 5.10 最初は背景色だけを確かめる — 進行表
+### 5.10 背景色から手動プレイまで — 作業を減らす進行表
 
-第5.4節の全実習を一度に終えてから実行する必要はありません。以下の順に、動作する地点を残して進めてください。
+**5-Hまで実装した現在地からは、まず5.6と5.5の実習1〜2へ進みます。** 完成例を使って最初の表示へつなぎ、5-I以降は下の順に進めます。既習部分の課題や記録をやり直す必要はありません。
 
-| 区切り | 取り組む範囲 | そこで止めて確認すること |
-| --- | --- | --- |
-| 準備 | 5.1〜5.3、5.6 | 自分のAPI名とファイル配置、依存とターゲットの分離 |
-| 背景色 | 5.4の実習1〜4、5.5の実習1〜2 | 色を変えられ、閉じる操作が働く |
-| サイズ変更 | 5.4の実習5、5.5の実習3 | 描画先・深度・ビューポートが更新される |
-| 直方体・球 | 5.4の実習6〜7 | 大きさ、位置、カメラ、前後関係が意図どおり |
-| 手動プレイ | 5.5の実習4〜5 | 入力と固定更新を接続できる |
-| 操作画面 | 5.7 | ステージ選択、状態表示、入力競合の防止 |
+| 区切り | コピーして使う基盤 | 自分で考えて書く部分 | 一度確認して次へ進む条件 |
+| --- | --- | --- | --- |
+| 背景色 | 5.6、5-H直後のコンストラクター、5.5実習1〜2 | 実装済みの5-Hを使う | 背景色の変更とウィンドウの開閉 |
+| 深度・サイズ変更 | 5-I、5-O | なし | サイズ変更・最小化から復帰できる |
+| ゲームの見た目 | 形状の生成、既存の描画設定 | 5-J〜5-L：カメラ、world行列、Stage・Stateからの描画 | 各物体の位置・大きさ・前後関係が正しい |
+| 手動プレイ | 時計・固定更新のループ、キー取得のAPI | 5-P・5-Q：入力変換、1ステップと終了・再開 | 移動・終了・即時再開が働く |
+| 操作画面 | 5-S〜5-T：ビルド・初期化・通知・終了処理 | 5-U：開始・戻る・状態表示 | 選択中は止まり、開始すると遊べる |
+| 最終確認 | 既存の設定 | 新機能を足さず不具合を直す | 5.9を一通り確認する |
 
-初期段階では未使用の図形メンバーを持っていても構いませんが、未実装の関数を呼ばないようにします。背景色の段階ではrenderに図形や深度の利用をまだ書かず、実習5を終えてから深度設定を追加します。
+自分で書く中心は5-J〜5-L、5-P、5-Qの小さな関数、5-Uです。直方体の練習は最初の一個だけにし、そのworld行列をdrawRect()へまとめてステージ表示に使います。確認用の別アプリや、同じ描画をする別Rendererは作りません。
+
+図形を追加するまではcube_・sphere_を生成せず、render()でも使いません。追加する段階でコンストラクターへ形状生成を一度だけ足します。幅・高さのガード、背景・深度のクリア、Presentの結果確認は残します。
 
 | 症状 | 最初に確認すること |
 | --- | --- |
-| ウィンドウが出ない | RegisterClassExWとCreateWindowExWの失敗、Win32のエラーコード |
-| 背景が出ない | HRESULT、描画先の設定、ClearとPresent、描画領域の大きさ |
-| 背景だけで図形がない | Drawの呼び出し、行列、カメラ前方と描画範囲、座標系の統一 |
-| 球が半分床に埋まる | 中心Yが半径になっているか |
+| ウィンドウが出ない | Win32の失敗コード、起動対象がsphere_gameか |
+| 背景が出ない | コンストラクターの接続、HRESULT、幅・高さの保存、ClearとPresent |
+| 背景だけで図形がない | Drawの呼び出し、world・view・projection、カメラの範囲 |
+| 球が床に埋まる | 中心Yを半径にしているか |
 | 奥の物体が手前を覆う | 深度ビューの作成・設定・毎フレームのクリア |
-| サイズ変更で失敗する | バックバッファへの古い参照、バインド解除とビューの解放 |
-| 障害物の表示が動かない | 初期設定ではなくstate.obstaclesを読んでいるか |
+| サイズ変更で失敗する | 古い参照の解放、バインド解除、バックバッファをメンバーに残していないか |
+| 障害物が動いて見えない | stageの初期設定ではなくstate.obstaclesを描いているか |
 | 復帰直後に時間切れ | 前回時刻とaccumulatorの両方をリセットしているか |
 
-**最後の余白：** 見た目に関する小さな変更を一つ、自分で考えて実装してください。例は「障害物だけ背を高くする」「カメラの注視点をステージ中央へ寄せる」です。変更する責務、使う関数、予想する表示を書いてから実装し、シミュレーションの結果が変わらないことも確かめてください。
+見た目の自由課題や追加の調査ノートは任意です。まず手動プレイを通し、残り時間をAIの観測・学習・保存へ使います。
+
 
 
 <a id="chapter-6"></a>
@@ -2021,4 +2342,4 @@ READMEには、ビルド方法、操作、保存ファイルの配置、学習�
 
 WindowsのMSVCビルド、Direct3D 11の表示、DirectXTKとImGuiのリンク・実行は、この環境では未確認。第5章の完了条件をWindows実機で確認する。DirectXTKやImGuiのリビジョンを固定した後は、その版でビルドし直す。OSをまたぐ浮動小数点結果や学習結果の一致、学習性能、任意の高速設定での非貫通は保証していない。
 
-第5章は2026年10月21日にワークブック形式へ改稿した。章構成、演習の前提・参照・コードフェンスを静的に確認した。空欄は学習者が実装する課題であり、完成プログラムとしてのビルドやWindowsでの描画検証は行っていない。上記の2026年10月20日の検証記録は、改稿後の第5章の動作保証を表すものではない。
+第5章は2026年10月22日に、5-Hまでの既習本文を残し、定型部分をコピーし、ゲームによって変わる処理を自分で書く構成へ改稿した。章構成、差し込み先、現在のコアAPI・依存ヘッダーとの対応、コードフェンスを静的に確認した。コピー用の基盤と自力実装の骨組みを含む教材であり、改稿後のWindowsビルド・リンク・画面表示は未検証。上記の2026年10月20日の検証記録は、改稿後の第5章の動作保証を表すものではない。
