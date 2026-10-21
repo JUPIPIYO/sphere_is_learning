@@ -1,0 +1,37 @@
+cmake_minimum_required(VERSION 3.24)
+project(SphereIsLearning LANGUAGES CXX)
+
+add_library(sphere_core src/core/Simulation.cpp src/core/Simulation.hpp "src/app/HeadlessMain.cpp")# "tests/SimulationTests.cpp" "src/app/WindowsMain.cpp" "src/renderer/directX11/Renderer.cpp")
+target_include_directories(sphere_core PUBLIC src)
+target_compile_features(sphere_core PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(sphere_core PRIVATE /W4 /permissive- /utf-8)
+else()
+    target_compile_options(sphere_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/app/Hello.cpp")
+    add_executable(sphere_hello src/app/Hello.cpp "src/app/HeadlessMain.cpp" "tests/SimulationTests.cpp" "src/app/WindowsMain.cpp" )#"src/renderer/directX11/Renderer.cpp")
+    target_compile_features(sphere_hello PRIVATE cxx_std_20)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/app/HeadlessMain.cpp")
+    add_executable(sphere_headless src/app/HeadlessMain.cpp )# "tests/SimulationTests.cpp" "src/app/WindowsMain.cpp" "src/renderer/directX11/Renderer.cpp")
+    target_link_libraries(sphere_headless PRIVATE sphere_core)
+else()
+    message(STATUS "sphere_headless will be enabled when src/app/HeadlessMain.cpp is added")
+endif()
+
+# Only local tests are needed; do not load CTest's dashboard integration.
+option(BUILD_TESTING "Build the tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/SimulationTests.cpp")
+        add_executable(sphere_tests tests/SimulationTests.cpp )#"src/app/WindowsMain.cpp" "src/renderer/directX11/Renderer.cpp")
+        target_link_libraries(sphere_tests PRIVATE sphere_core)
+        add_test(NAME simulation COMMAND sphere_tests)
+    else()
+        message(STATUS "sphere_tests will be enabled when tests/SimulationTests.cpp is added")
+    endif()
+endif()
