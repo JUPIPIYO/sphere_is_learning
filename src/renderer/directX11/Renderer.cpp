@@ -1,4 +1,4 @@
-#include "renderer/d3d11/Renderer.hpp"
+#include "renderer/directX11/Renderer.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -10,194 +10,94 @@
 #include <DirectXMath.h>
 #include "core/Simulation.hpp"
 
+using namespace std;
+using namespace DirectX;
+
 namespace {
-
-    void throwIfFailed(HRESULT result, const char* operation) {
-        if (SUCCEEDED(result)) {
-            return;
-        }
-
-        std::ostringstream message;
-        message << operation << " failed (HRESULT=0x"
-            << std::hex << std::uppercase << static_cast<unsigned long>(result) << ')';
-        throw std::runtime_error(message.str());
-    }
-
-    // DirectXTK の単位立方体を、XZ平面上の Rect と指定した高さへ変換して描く。
-    void drawRect(
-        DirectX::GeometricPrimitive& cube,
-        const sil::Rect& rect,
-        float centerY,
-        float height,
-        DirectX::FXMVECTOR color,
-        DirectX::FXMMATRIX view,
-        DirectX::FXMMATRIX projection) {
-        using namespace DirectX;
-
-        const XMMATRIX world =
-            XMMatrixScaling(rect.half.x * 2.0F, height, rect.half.z * 2.0F) *
-            XMMatrixTranslation(rect.center.x, centerY, rect.center.z);
-        cube.Draw(world, view, projection, color);
-    }
-
-} // namespace
+	void throwIfFailed(HRESULT result,const char* operation)
+	{
+		//成功なら戻る、失敗ならその時の処理とruntime_errorを投げる
+		if (FAILED(result))
+		{
+			ostringstream message;
+			//失敗メッセージの組み立て
+			message << "hex" << result << "in operation:" << operation;
+			throw runtime_error(message.str());
+		}
+		else return;
+	}
+}
 
 namespace sil::renderer {
-
-    Renderer::Renderer(HWND window, std::uint32_t width, std::uint32_t height) {
-        createDeviceAndSwapChain(window);
-
-        // DirectXTK の図形生成はデバイスコンテキストを受け取る。false は左手系座標。
-        cube_ = DirectX::GeometricPrimitive::CreateCube(context_.Get(), 1.0F, false);
-        sphere_ = DirectX::GeometricPrimitive::CreateSphere(context_.Get(), 1.0F, 24, false);
-
-        resize(width, height);
-    }
-
-    void Renderer::createDeviceAndSwapChain(HWND window) {
-        DXGI_SWAP_CHAIN_DESC swapChainDescription{};
-        swapChainDescription.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        swapChainDescription.SampleDesc.Count = 1;
-        swapChainDescription.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDescription.BufferCount = 1;
-        swapChainDescription.OutputWindow = window;
-        swapChainDescription.Windowed = TRUE;
-        swapChainDescription.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
-        UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-#if defined(_DEBUG)
-        // Visual Studio の Graphics Diagnostics / D3D11 debug layer を使うための指定。
-        flags |= D3D11_CREATE_DEVICE_DEBUG;
+	
+	void Renderer::createDeviceAndSwapChain(HWND window)
+	{
+		//まずdescriptionを定義する
+		DXGI_SWAP_CHAIN_DESC description{};
+		//諸々の設定をしていく
+		description.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		description.SampleDesc.Count = 1;
+		description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		description.BufferCount = 1;
+		description.OutputWindow = window;
+		description.Windowed = true;
+		description.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; //内容は基本保持しない
+		UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+		//デバッグの時はフラグ追加
+#ifdef _DEBUG
+		flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
+		D3D_FEATURE_LEVEL levels[] = 
+		{
+		D3D_FEATURE_LEVEL_11_1,
+		D3D_FEATURE_LEVEL_11_0
+		};
 
-        constexpr D3D_FEATURE_LEVEL requestedLevels[] = {
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-        };
-        D3D_FEATURE_LEVEL actualLevel{};
+		D3D_FEATURE_LEVEL actualLevel{};
+		throwIfFailed(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr
+			, flags, levels, static_cast<UINT>(size(levels)), D3D11_SDK_VERSION, &description, swapChain_.GetAddressOf()
+			, device_.GetAddressOf(), &actualLevel, context_.GetAddressOf()), "create_device_and_swapChain");
+	}
 
-        throwIfFailed(
-            D3D11CreateDeviceAndSwapChain(
-                nullptr,
-                D3D_DRIVER_TYPE_HARDWARE,
-                nullptr,
-                flags,
-                requestedLevels,
-                static_cast<UINT>(std::size(requestedLevels)),
-                D3D11_SDK_VERSION,
-                &swapChainDescription,
-                swapChain_.GetAddressOf(),
-                device_.GetAddressOf(),
-                &actualLevel,
-                context_.GetAddressOf()),
-            "D3D11CreateDeviceAndSwapChain");
-    }
+	void Renderer::createSizeDependentResources(uint32_t width, uint32_t height)
+	{
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+		//バックバッファ取得
+		throwIfFailed(swapChain_->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf())), "Get Buffer");
+		//renderTargetView_に格納
+		throwIfFailed(device_->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView_.GetAddressOf()), "Create RenderTargetView");
 
-    void Renderer::resize(std::uint32_t width, std::uint32_t height) {
-        if (width == 0 || height == 0) {
-            return;
-        }
+		//左上を(0, 0)、幅と高さを引数の値、深度範囲を[0, 1]に
+		viewport_.TopLeftX = 0;
+		viewport_.TopLeftY = 0;
+		viewport_.Width = width;
+		viewport_.Height = height;
+		viewport_.MinDepth = 0;
+		viewport_.MaxDepth = 1;
+	}
 
-        // 初回も ResizeBuffers 後も、描画先と深度バッファを作り直す。
-        if (width_ != 0 && height_ != 0) {
-            context_->OMSetRenderTargets(0, nullptr, nullptr);
-            renderTargetView_.Reset();
-            depthStencilView_.Reset();
-            depthTexture_.Reset();
+	void Renderer::render(const Stage& stage, const State& state)
+	{
+		//とりあえず背景色だけ表示するのをやる
+		//width, heightでまず判定
+		if (width_ <= 0 || height_ <= 0) { return; }
 
-            throwIfFailed(
-                swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0),
-                "IDXGISwapChain::ResizeBuffers");
-        }
+		//描画先の設定
+		ID3D11RenderTargetView* views[] = {
+			renderTargetView_.Get()
+		};
+		context_->OMSetRenderTargets(1, views, nullptr);
 
-        createSizeDependentResources(width, height);
-        width_ = width;
-        height_ = height;
-    }
+		context_->RSSetViewports(1, &viewport_);
 
-    void Renderer::createSizeDependentResources(std::uint32_t width, std::uint32_t height) {
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-        throwIfFailed(
-            swapChain_->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf())),
-            "IDXGISwapChain::GetBuffer");
-        throwIfFailed(
-            device_->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView_.GetAddressOf()),
-            "ID3D11Device::CreateRenderTargetView");
+		float RGBA[] = {
+			0.2f, 0.2f, 0.4f, 1.0f
+		};
+		context_->ClearRenderTargetView(renderTargetView_.Get(), RGBA);
+	}
 
-        D3D11_TEXTURE2D_DESC depthDescription{};
-        depthDescription.Width = width;
-        depthDescription.Height = height;
-        depthDescription.MipLevels = 1;
-        depthDescription.ArraySize = 1;
-        depthDescription.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        depthDescription.SampleDesc.Count = 1;
-        depthDescription.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        throwIfFailed(
-            device_->CreateTexture2D(&depthDescription, nullptr, depthTexture_.GetAddressOf()),
-            "ID3D11Device::CreateTexture2D for depth");
-        throwIfFailed(
-            device_->CreateDepthStencilView(
-                depthTexture_.Get(), nullptr, depthStencilView_.GetAddressOf()),
-            "ID3D11Device::CreateDepthStencilView");
-
-        viewport_.TopLeftX = 0.0F;
-        viewport_.TopLeftY = 0.0F;
-        viewport_.Width = static_cast<float>(width);
-        viewport_.Height = static_cast<float>(height);
-        viewport_.MinDepth = 0.0F;
-        viewport_.MaxDepth = 1.0F;
-    }
-
-    void Renderer::render(const Stage& stage, const State& state) {
-        if (width_ == 0 || height_ == 0) {
-            return;
-        }
-
-        const float clearColor[] = { 0.06F, 0.08F, 0.12F, 1.0F };
-        context_->OMSetRenderTargets(1, renderTargetView_.GetAddressOf(), depthStencilView_.Get());
-        context_->RSSetViewports(1, &viewport_);
-        context_->ClearRenderTargetView(renderTargetView_.Get(), clearColor);
-        context_->ClearDepthStencilView(
-            depthStencilView_.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0F, 0);
-
-        using namespace DirectX;
-        const float aspect = static_cast<float>(width_) / static_cast<float>(height_);
-
-        // 左手系で -Z 側から原点を見る。画面の右はワールドの +X、上は +Z になる。
-        const XMMATRIX view = XMMatrixLookAtLH(
-            XMVectorSet(0.0F, 16.0F, -18.0F, 0.0F),
-            XMVectorSet(0.0F, 0.0F, 0.0F, 0.0F),
-            XMVectorSet(0.0F, 1.0F, 0.0F, 0.0F));
-        const XMMATRIX projection = XMMatrixPerspectiveFovLH(
-            XMConvertToRadians(50.0F), aspect, 0.1F, 100.0F);
-
-        constexpr float floorThickness = 0.20F;
-        constexpr float wallHeight = 1.00F;
-        constexpr float obstacleHeight = 0.75F;
-
-        // 床、ゴール、壁、障害物は単位立方体を拡大して描く。
-        drawRect(*cube_, stage.bounds, -floorThickness * 0.5F, floorThickness,
-            Colors::DarkSlateGray, view, projection);
-        drawRect(*cube_, stage.goal, 0.025F, 0.05F, Colors::LimeGreen, view, projection);
-
-        for (const Rect& wall : stage.walls) {
-            drawRect(*cube_, wall, wallHeight * 0.5F, wallHeight, Colors::SlateGray, view, projection);
-        }
-        for (const Rect& obstacle : state.obstacles) {
-            drawRect(*cube_, obstacle, obstacleHeight * 0.5F, obstacleHeight,
-                Colors::Crimson, view, projection);
-        }
-
-        // CreateSphere の直径は1なので、半径の2倍で拡大する。
-        const XMMATRIX playerWorld =
-            XMMatrixScaling(stage.radius * 2.0F, stage.radius * 2.0F, stage.radius * 2.0F) *
-            XMMatrixTranslation(state.player.x, stage.radius, state.player.z);
-        sphere_->Draw(playerWorld, view, projection, Colors::CornflowerBlue);
-    }
-
-    void Renderer::present() {
-        // 1 は垂直同期を待つ指定。学習用のヘッドレス実行はこの関数を呼ばない。
-        throwIfFailed(swapChain_->Present(1, 0), "IDXGISwapChain::Present");
-    }
-
+	void Renderer::present()
+	{
+		swapChain_->Present(1, 0); //垂直同期
+	}
 }

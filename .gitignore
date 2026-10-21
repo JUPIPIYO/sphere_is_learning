@@ -1,0 +1,39 @@
+# CMake build directories and generated files
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+
+# Visual Studio local settings and caches
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.db-shm
+*.VC.db-wal
+*.VC.opendb
+
+# Compiled objects, libraries, and executables
+*.obj
+*.o
+*.pch
+*.pdb
+*.ilk
+*.idb
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+*.dylib
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
