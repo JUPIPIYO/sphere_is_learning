@@ -1417,6 +1417,8 @@ cmake --build build-workbook --config Debug --target sphere_game
 
 「ヘッダーが見つからない」はinclude先、「未解決シンボル」は定義やリンク先、「起動後のHRESULT失敗」は実行時の設定を調べます。全APIの調査ノートは不要です。Debugレイヤー不足ならWindowsのオプション機能Graphics Toolsを確認します。
 
+**このPCでCMakeが終了コード`-1073740791`で止まる場合：** 日本語を含む作業ディレクトリとCMakeの組み合わせによる異常終了を確認しています。プロジェクト直下から`.\scripts\build.ps1`を実行すると、内部で作業ディレクトリを切り替えて、テストを有効にしたまま`build`へ生成・ビルドします。実行は`.\build\Debug\sphere_game.exe`です。テストも実行するときは`-RunTests`を付けます。[原因・検証結果と詳しい手順](build-troubleshooting.md)を参照してください。
+
 ゲームが動いた区切りで、sphere_headlessと実装済みのsphere_testsもビルド・実行します。描画準備のたびに同じ確認を重ねる必要はありません。
 
 

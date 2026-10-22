@@ -29,6 +29,16 @@ namespace {
 }
 
 namespace sil::renderer {
+
+	//コンストラクタ
+	Renderer::Renderer(HWND window, uint32_t width, uint32_t height)
+	{
+
+		//デバイス・スワップチェインの作成
+		createDeviceAndSwapChain(window);
+
+		resize(width, height);
+	}
 	
 	void Renderer::createDeviceAndSwapChain(HWND window)
 	{
@@ -74,6 +84,39 @@ namespace sil::renderer {
 		viewport_.Height = height;
 		viewport_.MinDepth = 0;
 		viewport_.MaxDepth = 1;
+
+		//深度バッファ
+		D3D11_TEXTURE2D_DESC depthDescription{};
+		depthDescription.Width = width;
+		depthDescription.Height = height;
+		depthDescription.MipLevels = 1;
+		depthDescription.ArraySize = 1;
+		depthDescription.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthDescription.SampleDesc.Count = 1;
+		depthDescription.Usage = D3D11_USAGE_DEFAULT;
+		depthDescription.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+		throwIfFailed(device_->CreateTexture2D(&depthDescription, nullptr, depthTexture_.GetAddressOf()), "Create depth texture");
+		throwIfFailed(device_->CreateDepthStencilView(depthTexture_.Get(), nullptr, depthStencilView_.GetAddressOf()), "Create depth view");
+	}
+
+	//サイズの変更 = 全て再構成(コンストラクタでも呼ばれる)
+	void Renderer::resize(uint32_t width, uint32_t height)
+	{
+		width_ = width;
+		height_ = height;
+		if (width == 0 || height == 0) {
+			return;
+		}
+
+		if (renderTargetView_) {
+			context_->OMSetRenderTargets(0, nullptr, nullptr);
+			renderTargetView_.Reset();
+			depthStencilView_.Reset();
+			depthTexture_.Reset();
+			throwIfFailed(swapChain_->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0), "ResizeBuffers");
+		}
+		createSizeDependentResources(width, height);
 	}
 
 	void Renderer::render(const Stage& stage, const State& state)
@@ -86,18 +129,18 @@ namespace sil::renderer {
 		ID3D11RenderTargetView* views[] = {
 			renderTargetView_.Get()
 		};
-		context_->OMSetRenderTargets(1, views, nullptr);
-
+		context_->OMSetRenderTargets(1, views, depthStencilView_.Get());
+		context_->ClearDepthStencilView(depthStencilView_.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0F, 0);
 		context_->RSSetViewports(1, &viewport_);
 
 		float RGBA[] = {
-			0.2f, 0.2f, 0.4f, 1.0f
+			1.0f, 0.0f, 0.0f, 1.0f
 		};
 		context_->ClearRenderTargetView(renderTargetView_.Get(), RGBA);
 	}
 
 	void Renderer::present()
 	{
-		swapChain_->Present(1, 0); //垂直同期
+		throwIfFailed(swapChain_->Present(1, 0), "Present"); //垂直同期
 	}
 }
