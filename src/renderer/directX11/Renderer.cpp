@@ -26,6 +26,27 @@ namespace {
 		}
 		else return;
 	}
+
+	//GeometricPrimitiveのcubeを実際のRectにしていく
+	void drawRect(const DirectX::GeometricPrimitive& cube, const sil::Rect& rect,
+		float centerY, float height, DirectX::FXMVECTOR color,
+		DirectX::FXMMATRIX view, DirectX::FXMMATRIX projection) 
+	{
+		// TODO: 拡大する。rect.halfは「半分の長さ」。
+		float x_long = rect.half.x * 2;
+		float z_long = rect.half.z * 2;
+		//world上のどこにいるのか、をここで作成
+		FXMMATRIX world = XMMatrixScaling(x_long, height, z_long) * XMMatrixTranslation(rect.center.x, centerY, rect.center.z);
+		cube.Draw(world, view, projection, color);
+	}
+
+	void drawSphere(const DirectX::GeometricPrimitive& sphere, const sil::Player& p,  DirectX::FXMVECTOR color,
+		DirectX::FXMMATRIX view, DirectX::FXMMATRIX projection)
+	{
+		//world上のどこにいるのか、をここで作成
+		FXMMATRIX world = XMMatrixScaling(p.radius, p.radius, p.radius) * XMMatrixTranslation(p.pos.x, p.radius, p.pos.z);
+		sphere.Draw(world, view, projection, color);
+	}
 }
 
 namespace sil::renderer {
@@ -38,6 +59,10 @@ namespace sil::renderer {
 		createDeviceAndSwapChain(window);
 
 		resize(width, height);
+
+		//各種プリミティブ物体の作成
+		cube_ = GeometricPrimitive::CreateCube(context_.Get(), 1.0f, false);
+		sphere_ = GeometricPrimitive::CreateSphere(context_.Get(), 1.0f, 24, false);
 	}
 	
 	void Renderer::createDeviceAndSwapChain(HWND window)
@@ -134,9 +159,56 @@ namespace sil::renderer {
 		context_->RSSetViewports(1, &viewport_);
 
 		float RGBA[] = {
-			1.0f, 0.0f, 0.0f, 1.0f
+			0.2f, 0.2f, 0.2f, 1.0f
 		};
 		context_->ClearRenderTargetView(renderTargetView_.Get(), RGBA);
+
+		//viewPoint, targetなどを適当に作ってみる
+		DirectX::XMVECTOR viewPoint = XMVectorSet(0, 10, -10, 0);
+
+		auto target = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+
+		//上方向
+		auto up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+		//カメラの向き行列を作成
+		auto view = XMMatrixLookAtLH(viewPoint, target, up);
+
+		auto projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(25), (float(width_) / float(height_))
+			, 0.1f, 100.0f);
+
+		//test : 直方体を実際に描画してみる
+		//sil::Rect rect(sil::Vec2{ 0, 0 }, sil::Vec2{ 1, 1 });
+		//drawRect(*cube_, rect, 0.5f, 1.0f, XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
+
+		/*
+		床	stage.bounds	厚さ0.2、中心Yは-0.1。上面がY=0になる
+		ゴール	stage.goal	厚さ0.05、中心Yは0.025、緑色
+		壁	stage.wallsの各Rect	高さ1、中心Yは0.5、灰色
+		障害物	**state.obstacles**の各Rect	高さ0.75、中心Yは0.375、赤色
+		プレイヤー	state.player.pos、stage.player.radius	球の直径を半径の2倍にし、中心Yを半径にする
+		*/
+
+		sil::Rect rect(sil::Vec2{ 0, 0 }, sil::Vec2{ 1, 1 });
+		//床
+		drawRect(*cube_, stage.bounds, -0.2, 0.4, XMVectorSet(0.0f, 0.0f, 0.5f, 1.0f), view, projection);
+		//ゴール
+		drawRect(*cube_, stage.goal, 0.02, 0.01, XMVectorSet(0.0f, 0.8f, 0.0f, 1.0f), view, projection);
+		//壁
+		for (int i = 0; i < stage.walls.size(); i++)
+		{
+			auto wall = stage.walls[i];
+			drawRect(*cube_, wall, 3, 1.5, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
+		}
+		//障害物
+		for (int i = 0; i < stage.obstacles.size(); i++)
+		{
+			auto obs = stage.obstacles[i];
+			drawRect(*cube_, obs.box, 3, 1.5, XMVectorSet(0.1f, 0.4f, 0.1f, 1.0f), view, projection);
+		}
+		//Player
+		drawSphere(*sphere_, stage.player,  XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
+
 	}
 
 	void Renderer::present()
