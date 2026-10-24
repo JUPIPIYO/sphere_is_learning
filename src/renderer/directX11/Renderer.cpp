@@ -1,4 +1,4 @@
-#include "renderer/directX11/Renderer.hpp"
+ï»¿#include "renderer/directX11/Renderer.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -16,26 +16,26 @@ using namespace DirectX;
 namespace {
 	void throwIfFailed(HRESULT result,const char* operation)
 	{
-		//¬Œ÷‚È‚ç–ß‚éA¸”s‚È‚ç‚»‚Ì‚Ìˆ—‚Æruntime_error‚ğ“Š‚°‚é
+		//æˆåŠŸãªã‚‰æˆ»ã‚‹ã€å¤±æ•—ãªã‚‰ãã®æ™‚ã®å‡¦ç†ã¨runtime_errorã‚’æŠ•ã’ã‚‹
 		if (FAILED(result))
 		{
 			ostringstream message;
-			//¸”sƒƒbƒZ[ƒW‚Ì‘g‚İ—§‚Ä
+			//å¤±æ•—ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã®çµ„ã¿ç«‹ã¦
 			message << "std::hex" << result << "in operation:" << operation;
 			throw runtime_error(message.str());
 		}
 		else return;
 	}
 
-	//GeometricPrimitive‚Ìcube‚ğÀÛ‚ÌRect‚É‚µ‚Ä‚¢‚­
+	//GeometricPrimitiveã®cubeã‚’å®Ÿéš›ã®Rectã«ã—ã¦ã„ã
 	void drawRect(const DirectX::GeometricPrimitive& cube, const sil::Rect& rect,
 		float centerY, float height, DirectX::FXMVECTOR color,
 		DirectX::FXMMATRIX view, DirectX::FXMMATRIX projection) 
 	{
-		// TODO: Šg‘å‚·‚éBrect.half‚Íu”¼•ª‚Ì’·‚³vB
+		// TODO: æ‹¡å¤§ã™ã‚‹ã€‚rect.halfã¯ã€ŒåŠåˆ†ã®é•·ã•ã€ã€‚
 		float x_long = rect.half.x * 2;
 		float z_long = rect.half.z * 2;
-		//worldã‚Ì‚Ç‚±‚É‚¢‚é‚Ì‚©A‚ğ‚±‚±‚Åì¬
+		//worldä¸Šã®ã©ã“ã«ã„ã‚‹ã®ã‹ã€ã‚’ã“ã“ã§ä½œæˆ
 		FXMMATRIX world = XMMatrixScaling(x_long, height, z_long) * XMMatrixTranslation(rect.center.x, centerY, rect.center.z);
 		cube.Draw(world, view, projection, color);
 	}
@@ -43,7 +43,7 @@ namespace {
 	void drawSphere(const DirectX::GeometricPrimitive& sphere, const sil::Player& p,  DirectX::FXMVECTOR color,
 		DirectX::FXMMATRIX view, DirectX::FXMMATRIX projection)
 	{
-		//worldã‚Ì‚Ç‚±‚É‚¢‚é‚Ì‚©A‚ğ‚±‚±‚Åì¬
+		//worldä¸Šã®ã©ã“ã«ã„ã‚‹ã®ã‹ã€ã‚’ã“ã“ã§ä½œæˆ
 		FXMMATRIX world = XMMatrixScaling(p.radius, p.radius, p.radius) * XMMatrixTranslation(p.pos.x, p.radius, p.pos.z);
 		sphere.Draw(world, view, projection, color);
 	}
@@ -51,34 +51,34 @@ namespace {
 
 namespace sil::renderer {
 
-	//ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+	//ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 	Renderer::Renderer(HWND window, uint32_t width, uint32_t height)
 	{
 
-		//ƒfƒoƒCƒXEƒXƒƒbƒvƒ`ƒFƒCƒ“‚Ìì¬
+		//ãƒ‡ãƒã‚¤ã‚¹ãƒ»ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ã®ä½œæˆ
 		createDeviceAndSwapChain(window);
 
 		resize(width, height);
 
-		//ŠeíƒvƒŠƒ~ƒeƒBƒu•¨‘Ì‚Ìì¬
+		//å„ç¨®ãƒ—ãƒªãƒŸãƒ†ã‚£ãƒ–ç‰©ä½“ã®ä½œæˆ
 		cube_ = GeometricPrimitive::CreateCube(context_.Get(), 1.0f, false);
 		sphere_ = GeometricPrimitive::CreateSphere(context_.Get(), 1.0f, 24, false);
 	}
 	
 	void Renderer::createDeviceAndSwapChain(HWND window)
 	{
-		//‚Ü‚¸description‚ğ’è‹`‚·‚é
+		//ã¾ãšdescriptionã‚’å®šç¾©ã™ã‚‹
 		DXGI_SWAP_CHAIN_DESC description{};
-		//”X‚Ìİ’è‚ğ‚µ‚Ä‚¢‚­
+		//è«¸ã€…ã®è¨­å®šã‚’ã—ã¦ã„ã
 		description.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		description.SampleDesc.Count = 1;
 		description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		description.BufferCount = 1;
 		description.OutputWindow = window;
 		description.Windowed = true;
-		description.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; //“à—e‚ÍŠî–{•Û‚µ‚È‚¢
+		description.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; //å†…å®¹ã¯åŸºæœ¬ä¿æŒã—ãªã„
 		UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-		//ƒfƒoƒbƒO‚Ì‚Íƒtƒ‰ƒO’Ç‰Á
+		//ãƒ‡ãƒãƒƒã‚°ã®æ™‚ã¯ãƒ•ãƒ©ã‚°è¿½åŠ 
 #ifdef _DEBUG
 		flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -97,12 +97,12 @@ namespace sil::renderer {
 	void Renderer::createSizeDependentResources(uint32_t width, uint32_t height)
 	{
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-		//ƒoƒbƒNƒoƒbƒtƒ@æ“¾
+		//ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡å–å¾—
 		throwIfFailed(swapChain_->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf())), "Get Buffer");
-		//renderTargetView_‚ÉŠi”[
+		//renderTargetView_ã«æ ¼ç´
 		throwIfFailed(device_->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView_.GetAddressOf()), "Create RenderTargetView");
 
-		//¶ã‚ğ(0, 0)A•‚Æ‚‚³‚ğˆø”‚Ì’lA[“x”ÍˆÍ‚ğ[0, 1]‚É
+		//å·¦ä¸Šã‚’(0, 0)ã€å¹…ã¨é«˜ã•ã‚’å¼•æ•°ã®å€¤ã€æ·±åº¦ç¯„å›²ã‚’[0, 1]ã«
 		viewport_.TopLeftX = 0;
 		viewport_.TopLeftY = 0;
 		viewport_.Width = static_cast<float>(width);
@@ -110,7 +110,7 @@ namespace sil::renderer {
 		viewport_.MinDepth = 0;
 		viewport_.MaxDepth = 1;
 
-		//[“xƒoƒbƒtƒ@
+		//æ·±åº¦ãƒãƒƒãƒ•ã‚¡
 		D3D11_TEXTURE2D_DESC depthDescription{};
 		depthDescription.Width = width;
 		depthDescription.Height = height;
@@ -125,7 +125,7 @@ namespace sil::renderer {
 		throwIfFailed(device_->CreateDepthStencilView(depthTexture_.Get(), nullptr, depthStencilView_.GetAddressOf()), "Create depth view");
 	}
 
-	//ƒTƒCƒY‚Ì•ÏX = ‘S‚ÄÄ\¬(ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚Å‚àŒÄ‚Î‚ê‚é)
+	//ã‚µã‚¤ã‚ºã®å¤‰æ›´ = å…¨ã¦å†æ§‹æˆ(ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§ã‚‚å‘¼ã°ã‚Œã‚‹)
 	void Renderer::resize(uint32_t width, uint32_t height)
 	{
 		width_ = width;
@@ -146,11 +146,11 @@ namespace sil::renderer {
 
 	void Renderer::render(const Stage& stage, const State& state)
 	{
-		//‚Æ‚è‚ ‚¦‚¸”wŒiF‚¾‚¯•\¦‚·‚é‚Ì‚ğ‚â‚é
-		//width, height‚Å‚Ü‚¸”»’è
+		//ã¨ã‚Šã‚ãˆãšèƒŒæ™¯è‰²ã ã‘è¡¨ç¤ºã™ã‚‹ã®ã‚’ã‚„ã‚‹
+		//width, heightã§ã¾ãšåˆ¤å®š
 		if (width_ <= 0 || height_ <= 0) { return; }
 
-		//•`‰ææ‚Ìİ’è
+		//æç”»å…ˆã®è¨­å®š
 		ID3D11RenderTargetView* views[] = {
 			renderTargetView_.Get()
 		};
@@ -163,44 +163,45 @@ namespace sil::renderer {
 		};
 		context_->ClearRenderTargetView(renderTargetView_.Get(), RGBA);
 
-		//viewPoint, target‚È‚Ç‚ğ“K“–‚Éì‚Á‚Ä‚İ‚é
-		DirectX::XMVECTOR viewPoint = XMVectorSet(0, 10, -10, 0);
+		//viewè¡Œåˆ—ã€Projectionè¡Œåˆ—ã®ä½œæˆ
+		//viewPointã¯playerã®åº§æ¨™ã«å¿œã˜ã¦zæ–¹å‘ã«ã‚¹ãƒ©ã‚¤ãƒ‰
+		DirectX::XMVECTOR viewPoint = XMVectorSet(0, 10, -10 + state.player.pos.z, 0);
 
-		auto target = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+		auto target = XMVectorSet(0, 0, state.player.pos.z, 0);
 
-		//ã•ûŒü
+		//ä¸Šæ–¹å‘
 		auto up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-		//ƒJƒƒ‰‚ÌŒü‚«s—ñ‚ğì¬
+		//ã‚«ãƒ¡ãƒ©ã®å‘ãè¡Œåˆ—ã‚’ä½œæˆ
 		auto view = XMMatrixLookAtLH(viewPoint, target, up);
 
 		auto projection = XMMatrixPerspectiveFovLH(XMConvertToRadians(25), (float(width_) / float(height_))
 			, 0.1f, 100.0f);
 
-		//test : ’¼•û‘Ì‚ğÀÛ‚É•`‰æ‚µ‚Ä‚İ‚é
+		//test : ç›´æ–¹ä½“ã‚’å®Ÿéš›ã«æç”»ã—ã¦ã¿ã‚‹
 		//sil::Rect rect(sil::Vec2{ 0, 0 }, sil::Vec2{ 1, 1 });
 		//drawRect(*cube_, rect, 0.5f, 1.0f, XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
 
 		/*
-		°	stage.bounds	Œú‚³0.2A’†SY‚Í-0.1Bã–Ê‚ªY=0‚É‚È‚é
-		ƒS[ƒ‹	stage.goal	Œú‚³0.05A’†SY‚Í0.025A—ÎF
-		•Ç	stage.walls‚ÌŠeRect	‚‚³1A’†SY‚Í0.5AŠDF
-		áŠQ•¨	**state.obstacles**‚ÌŠeRect	‚‚³0.75A’†SY‚Í0.375AÔF
-		ƒvƒŒƒCƒ„[	state.player.posAstage.player.radius	‹…‚Ì’¼Œa‚ğ”¼Œa‚Ì2”{‚É‚µA’†SY‚ğ”¼Œa‚É‚·‚é
+		åºŠ	stage.bounds	åšã•0.2ã€ä¸­å¿ƒYã¯-0.1ã€‚ä¸Šé¢ãŒY=0ã«ãªã‚‹
+		ã‚´ãƒ¼ãƒ«	stage.goal	åšã•0.05ã€ä¸­å¿ƒYã¯0.025ã€ç·‘è‰²
+		å£	stage.wallsã®å„Rect	é«˜ã•1ã€ä¸­å¿ƒYã¯0.5ã€ç°è‰²
+		éšœå®³ç‰©	**state.obstacles**ã®å„Rect	é«˜ã•0.75ã€ä¸­å¿ƒYã¯0.375ã€èµ¤è‰²
+		ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼	state.player.posã€stage.player.radius	çƒã®ç›´å¾„ã‚’åŠå¾„ã®2å€ã«ã—ã€ä¸­å¿ƒYã‚’åŠå¾„ã«ã™ã‚‹
 		*/
 
-		//°
+		//åºŠ
 		float boundHeight = 0.1f;
 		drawRect(*cube_, stage.bounds, boundHeight / 2, boundHeight, XMVectorSet(0.0f, 0.0f, 0.5f, 1.0f), view, projection);
-		//ƒS[ƒ‹
-		drawRect(*cube_, stage.goal, 0.02f, 0.01f, XMVectorSet(0.0f, 0.8f, 0.0f, 1.0f), view, projection);
-		//•Ç
+		//ã‚´ãƒ¼ãƒ«
+		drawRect(*cube_, stage.goal, 0.15f, 0.3f, XMVectorSet(0.2f, 0.8f, 0.2f, 1.0f), view, projection);
+		//å£
 		for (int i = 0; i < stage.walls.size(); i++)
 		{
 			auto wall = stage.walls[i];
-			drawRect(*cube_, wall, 1.5f, 3.0f, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
+			drawRect(*cube_, wall, 0.25f, 0.5f, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
 		}
-		//áŠQ•¨
+		//éšœå®³ç‰©
 		for (int i = 0; i < state.obstacles.size(); i++)
 		{
 			auto obs = state.obstacles[i];
@@ -213,6 +214,6 @@ namespace sil::renderer {
 
 	void Renderer::present()
 	{
-		throwIfFailed(swapChain_->Present(1, 0), "Present"); //‚’¼“¯Šú
+		throwIfFailed(swapChain_->Present(1, 0), "Present"); //å‚ç›´åŒæœŸ
 	}
 }

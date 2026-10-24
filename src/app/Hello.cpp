@@ -1,7 +1,7 @@
-#include <iostream>
+ï»¿#include <iostream>
 
 int main()
 {
-	std::cout << "Sphere is Learning Start!!\n ‚¤‚¨[";
+	std::cout << "Sphere is Learning Start!!\n ã†ãŠãƒ¼";
 	return 0;
 }

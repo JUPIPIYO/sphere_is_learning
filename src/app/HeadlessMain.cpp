@@ -1,4 +1,4 @@
-#include "core/Simulation.hpp"
+ï»¿#include "core/Simulation.hpp"
 #include <iostream>
 
 using namespace sil;
@@ -13,7 +13,7 @@ int main()
 
 	while (env.state().gameState == GameState::Running)
 	{
-		//‚Æ‚è‚ ‚¦‚¸ã•ûŒü‚Éi‚Ş•û®‚Å
+		//ã¨ã‚Šã‚ãˆãšä¸Šæ–¹å‘ã«é€²ã‚€æ–¹å¼ã§
 		env.step(Direc::Up);
 	}
 

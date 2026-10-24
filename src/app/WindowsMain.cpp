@@ -1,4 +1,4 @@
-#include <windows.h>
+ï»¿#include <windows.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -9,18 +9,21 @@
 #include "core/Simulation.hpp"
 #include "renderer/directX11/Renderer.hpp"
 
-//ImGuiŠÖ˜A
+//ImGuié–¢é€£
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx11.h>
 
 using namespace sil;
 using namespace std;
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
 namespace
 {
 	struct WindowState
 	{
-		//ƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğ’è‹`
+		//ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’å®šç¾©
 		uint32_t width = 1280;
 		uint32_t height = 720;
 
@@ -32,7 +35,7 @@ namespace
 	};
 
 
-    // Renderer‚æ‚èŒã‚Ü‚ÅƒEƒBƒ“ƒhƒE‚ğ¶‚©‚µ—áŠO‚É‚à•Â‚¶‚é
+    // Rendererã‚ˆã‚Šå¾Œã¾ã§ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ç”Ÿã‹ã—ä¾‹å¤–æ™‚ã«ã‚‚é–‰ã˜ã‚‹
     struct WindowLifetime 
     {
 	    HWND window;
@@ -46,7 +49,7 @@ namespace
 
     Direc readDirec()
     {
-	    //WASD‚Ì“ü—Í“à—e‚ğ‰º‚ÉDirec‚ğì¬
+	    //WASDã®å…¥åŠ›å†…å®¹ã‚’ä¸‹ã«Direcã‚’ä½œæˆ
         int w = 0x57;
         int a = 0x41;
         int s = 0x53;
@@ -54,17 +57,17 @@ namespace
     
         int x = 0; int z = 0;
 
-        if (GetAsyncKeyState(d) && 0x8000 != 0) x += 1;
-        if (GetAsyncKeyState(a) && 0x8000 != 0) x -= 1;
+        if ((GetAsyncKeyState(d) && 0x8000) != 0) x += 1;
+        if ((GetAsyncKeyState(a) && 0x8000) != 0) x -= 1;
 
-        if (GetAsyncKeyState(w) && 0x8000 != 0) z += 1;
-        if (GetAsyncKeyState(s) && 0x8000 != 0) z -= 1;
+        if ((GetAsyncKeyState(w) && 0x8000) != 0) z += 1;
+        if ((GetAsyncKeyState(s) && 0x8000) != 0) z -= 1;
 
         auto direc = direcFromAxes(x, z);
         return direc;
     }
 
-    void advanceGame(Environment& env, Direc nextDirec, GameState& lastState, uint32_t initialSeed, float& lastReward)
+    void advanceGame(Environment& env, Direc nextDirec, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards )
     {
         auto result = env.step(nextDirec);
 
@@ -72,6 +75,9 @@ namespace
         {
             lastState = result.end;
             lastReward = result.reward;
+            
+            lastResults.push_back(StateToStr(lastState));
+            lastRewards.push_back(lastReward);
 
             env.reset(initialSeed);
         }
@@ -128,15 +134,11 @@ namespace
             try {
                 ImGui::StyleColorsDark();
 
-                //ŠeíInstantiate
-                if (!ImGui_ImplWin32_Init(window)) {
-                    throw std::runtime_error("ImGui Win32 initialization failed");
-                }
-                win32Ready_ = true;
+                //å„ç¨®ãƒãƒƒã‚¯ã‚¨ãƒ³ãƒ‰ã®åˆæœŸåŒ–
+                ImGui_ImplWin32_Init(window);
+                ImGui_ImplDX11_Init(renderer.device(), renderer.context());
 
-                if (!ImGui_ImplDX11_Init(renderer.device(), renderer.context())) {
-                    throw std::runtime_error("ImGui DX11 initialization failed");
-                }
+                win32Ready_ = true;
                 dx11Ready_ = true;
 
                 state_.imguiReady = true;
@@ -151,12 +153,15 @@ namespace
         ImGuiSession& operator=(const ImGuiSession&) = delete;
 
     private:
-        void shutdown() {
+        void shutdown() 
+        {
             state_.imguiReady = false;
-            if (dx11Ready_) {
+            if (dx11Ready_) 
+            {
                 ImGui_ImplDX11_Shutdown();
             }
-            if (win32Ready_) {
+            if (win32Ready_) 
+            {
                 ImGui_ImplWin32_Shutdown();
             }
             ImGui::DestroyContext();
@@ -169,14 +174,12 @@ namespace
 
 }
 
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
-
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 {
     HWND window = nullptr;
     try {
-        //‚±‚±‚ç‚Ö‚ñƒKƒ`‚Å‚È‚É‚â‚Á‚Ä‚é‚©‚í‚©‚ç‚ñ
+        //ã“ã“ã‚‰ã¸ã‚“ã‚¬ãƒã§ãªã«ã‚„ã£ã¦ã‚‹ã‹ã‚ã‹ã‚‰ã‚“
         constexpr wchar_t className[] = L"SphereIsLearningWindow";
         WNDCLASSEXW windowClass{};
         windowClass.cbSize = sizeof(windowClass);
@@ -209,10 +212,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         windowState.height = static_cast<uint32_t>(client.bottom - client.top);
         windowState.resizePending = false;
 
-        //Renderer‚ğì¬
+        //Rendererã‚’ä½œæˆ
         renderer::Renderer renderer(window, windowState.width, windowState.height);
 
-        //imGui‚ğì¬
+        //imGuiã‚’ä½œæˆ
         ImGuiSession imGui(window, renderer, windowState);
 
         constexpr uint32_t initialSeed = 42;
@@ -230,9 +233,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         bool running = true;
         ShowWindow(window, showCommand);
 
-        //ƒXƒe[ƒW‘I‘ğ•”•ª‚ğ•\¦‚·‚é‚½‚ß‚Ì•Ï”
+        //ã‚¹ãƒ†ãƒ¼ã‚¸é¸æŠéƒ¨åˆ†ã‚’è¡¨ç¤ºã™ã‚‹ãŸã‚ã®å¤‰æ•°
         int selectedStage = 0;
         bool mainPlaying = false;
+
+        //éå»ã®ãƒªã‚¶ãƒ«ãƒˆã‚’5å›åˆ†ã ã‘ä¿æŒã—ã¦ã€è¡¨ç¤ºã™ã‚‹
+        vector<string> lastResults;
+        vector<float> lastRewards;
 
         while (running) {
             MSG message{};
@@ -251,13 +258,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 break;
             }
 
-            // ƒTƒCƒY•ÏXˆ—
+            // ã‚µã‚¤ã‚ºå¤‰æ›´å‡¦ç†
             if (windowState.resizePending && !windowState.minimized) {
                 renderer.resize(windowState.width, windowState.height);
                 windowState.resizePending = false;
             }
 
-            //windowState‚Å‚±‚±‚Í‚È‚É‚ğ‚â‚Á‚Ä‚¢‚é‚ñ‚¾‚ë‚¤
+            //windowStateã§ã“ã“ã¯ãªã«ã‚’ã‚„ã£ã¦ã„ã‚‹ã‚“ã ã‚ã†
             const auto now = Clock::now();
             if (windowState.resetClock || windowState.minimized || !windowState.hasFocus) 
             {
@@ -272,25 +279,46 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
             const double elapsed = min(std::chrono::duration<double>(now - previousTime).count(), 0.25);
             previousTime = now;
 
-            // GUI‚Ì’Ç‰Á
+            // GUIã®è¿½åŠ 
             ImGui_ImplDX11_NewFrame();
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
             if (ImGui::Begin("Stage selection")) {
-                //ƒXƒe[ƒW‚Ì‘I‘ğƒ{ƒ^ƒ“‚ğ•\¦
+                //ã‚¹ãƒ†ãƒ¼ã‚¸ã®é¸æŠãƒœã‚¿ãƒ³ã‚’è¡¨ç¤º
                 ImGui::RadioButton("Stage 1", &selectedStage, 0);
 
-                if  (ImGui::Button("Start"))
+                if (!mainPlaying)
                 {
-                    mainPlaying = true;
+                    if (ImGui::Button("Start"))
+                    {
+                        mainPlaying = true;
+                    }
+                }
+                else
+                {
+                    if (ImGui::Button("Stop Game"))
+                    {
+                        mainPlaying = false;
+                    }
                 }
                 
-                //c‚èŠÔ‚Æ‘O‰ñ‚ÌŒ‹‰Ê‚ğ•\¦
-                int remainSec = (env.stage().maxSteps - env.state().currentStep) * env.dt;
-                ImGui::Text("Remaining %.1f second", remainSec, 0);
-                ImGui::Text("Last Result : %s", StateToStr(lastEnd).c_str());
-                ImGui::Text("Last Reward : %.1f", lastReward, 0);
+                //æ®‹ã‚Šæ™‚é–“ã¨å‰å›ã®çµæœã‚’è¡¨ç¤º
+                float remainSec = static_cast<float>((env.stage().maxSteps - env.state().currentStep) * env.dt);
+
+                int j = 0;
+                ImGui::Text("Remaining %.1f second", remainSec);
+                if (lastResults.size() > 0)
+                {
+                    for (int i = lastResults.size() - 1; i >= 0; i--)
+                    {
+                        ImGui::Text("Result : %s Reward : %.1f", lastResults[i].c_str(), lastRewards[i]);
+                        j++;
+                        if (j >= 15) break;
+                    }
+                }
+
+                //ImGui::Text("Result : %s Reward : %.1f", StateToStr(lastEnd).c_str(), lastReward);
             }
 
             ImGui::End();
@@ -303,7 +331,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
                 while (accumulator >= sil::Environment::dt) 
                 {
-                    advanceGame(env, direc, lastEnd, initialSeed, lastReward);
+                    advanceGame(env, direc, lastEnd, initialSeed, lastReward, lastResults, lastRewards);
                     accumulator -= sil::Environment::dt;
                 }
             }
@@ -312,10 +340,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 accumulator = 0.0;
             }
 
-            //•`‰æ
+            //æç”»
             renderer.render(env.stage(), env.state());
 
-            // GUI•`‰æ
+            // GUIæç”»
             ImGui::Render();
             ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 

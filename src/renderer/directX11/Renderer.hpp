@@ -1,4 +1,4 @@
-//#pragma once
+ï»¿//#pragma once
 #include <cstdint>
 #include <memory>
 #include <windows.h>
@@ -19,9 +19,9 @@ namespace sil::renderer {
         Renderer& operator=(const Renderer&) = delete;
 
         void resize(uint32_t width, uint32_t height);
-        //stage‚Æstate‚©‚çŒ»İ‚Ìó‹µ‚ğÀÛ‚É•`‰æ
+        //stageã¨stateã‹ã‚‰ç¾åœ¨ã®çŠ¶æ³ã‚’å®Ÿéš›ã«æç”»
         void render(const Stage& stage, const State& state);
-        //ÀÛ‚É•\¦
+        //å®Ÿéš›ã«è¡¨ç¤º
         void present();
         ID3D11Device* device() const { return device_.Get(); }
         ID3D11DeviceContext* context() const { return context_.Get(); }
@@ -30,7 +30,7 @@ namespace sil::renderer {
         void createDeviceAndSwapChain(HWND window);
         void createSizeDependentResources(uint32_t width, uint32_t height);
 
-        // TODO: Š—L‚·‚é‘Œ¹Aƒrƒ…[ƒ|[ƒgA•‚Æ‚‚³A}Œ`‚ğéŒ¾
+        // TODO: æ‰€æœ‰ã™ã‚‹è³‡æºã€ãƒ“ãƒ¥ãƒ¼ãƒãƒ¼ãƒˆã€å¹…ã¨é«˜ã•ã€å›³å½¢ã‚’å®£è¨€
         Microsoft::WRL::ComPtr<ID3D11Device> device_;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
         Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain_;
