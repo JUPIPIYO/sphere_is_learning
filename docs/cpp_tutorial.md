@@ -3,14 +3,15 @@
 ## 目次
 
 - [この教材の使い方](#guide)
-- [10/26までに手動プレイを完成させる日別計画](#manual-play-plan)
+- [10/26までに手動プレイを完成させる日別計画](#manual-play-plan)（完了）
+- [10/25〜11/16 AI学習から提出までの日別計画](#ai-plan)
 - [第1章 ビルドして動かす](#chapter-1)
 - [第2章 ゲームに必要なC++の読み方](#chapter-2)
 - [第3章 描画から独立したゲームを作る](#chapter-3)
 - [第4章 テストでルールを確かめる](#chapter-4)
 - [第5章 WindowsとDirect3D 11](#chapter-5)
 - [第6章 周辺を観測して行動を決める](#chapter-6)
-- [第7章 遺伝的アルゴリズムで方策を育てる](#chapter-7)
+- [第7章 遺伝的アルゴリズムで行動表を育てる](#chapter-7)
 - [第8章 保存・読み込み・CLIを作る](#chapter-8)
 - [第9章 検証と作品への仕上げ](#chapter-9)
 - [付録 サンプルCLI仕様](#cli)
@@ -24,7 +25,7 @@ Wキーを押すと球が進む。この短い動作にも、入力を読む処�
 
 [実装TODO](todo.md)の手順2以降を、実際に書くコードへ落とし込みます。WindowsへのcloneはTODOの手順1を先に済ませてください。C++の文法をすべて覚える必要はありません。各章のコードを動かし、値を変え、結果を予想して確かめます。
 
-このファイルは教材です。リポジトリの`src/`、`tests/`、`CMakeLists.txt`へ実装を配置したものではありません。本文で「完全例」としたコードブロックは、直前のファイル名へ保存する内容です。「差し込み例」は指定した場所へ追加・置換します。第5章は、定型的な基盤をコピーして使い、ゲームによって変わる処理を自分で書く構成です。「コピー可」「理解して使う」「自分で書く」の指針に従ってください。自分で書く箇所の骨組みには未完成のものがあります。
+このファイルは教材です。リポジトリの`src/`、`tests/`、`CMakeLists.txt`へ実装を配置したものではありません。本文で「完全例」としたコードブロックは、直前のファイル名へ保存する内容です。「差し込み例」は指定した場所へ追加・置換します。第5章は、定型的な基盤をコピーして使い、ゲームによって変わる処理を自分で書く構成です。「コピー可」「理解して使う」「自分で書く」の指針に従ってください。自分で書く箇所の骨組みには未完成のものがあります。第6〜8章のAI部分は、関数名・型・引数・手順だけを説明し、コードは自分で書く構成です。CLIの入口、CMake、保存の確認用の差し込み例だけをコード付きで示します。
 
 ### TODOとの対応
 
@@ -33,7 +34,7 @@ Wキーを押すと球が進む。この短い動作にも、入力を読む処�
 | 手順2 | 第1章 | コマンドから実行できる |
 | 手順3〜5 | 第2〜4章 | 画面なしで移動・衝突・終了判定ができる |
 | 手順6〜8 | 第5章 | Windowsで1ステージを遊べる |
-| 手順9 | 第6章 | 周辺の配置を36個の数値へ変換できる |
+| 手順9 | 第6章 | 周辺8マスを8バイトの観測と行動表の番号へ変換できる |
 | 手順10 | 第7〜8章 | 世代更新と保存済みAIの再実行ができる |
 | 手順11 | 第9章 | 比較条件と実測結果を説明できる |
 
@@ -64,13 +65,15 @@ tests/
 | 壁 | 円と長方形。X方向、Z方向の順に移動を試し、めり込む軸だけ戻す |
 | 障害物・ゴール | 円と長方形の接触を含む判定 |
 | 再開 | `step()`は結果を返す。呼び出し側が記録後に`reset()` |
-| 観測 | 1マス1.5、3×3、壁・障害物の2成分、現在と前回の2時点 |
-| AI | 6ステップごとに行動決定、36入力・16隠れ・9出力 |
+| 観測 | 1マス1.5、自分を除く周辺8マス。各マスは空き・壁・障害物・ゴールのいずれかを1バイトで表す |
+| AI | 6ステップごとに行動決定。観測の番号（4⁸＝65,536通り）から行動を引く行動表を、遺伝的アルゴリズムで育てる |
 | 初期ステージ | コンパイル時に作る設定。外部ステージ読込は追加課題 |
 
 <a id="manual-play-plan"></a>
 
 ## 10/26までに手動プレイを完成させる日別計画
+
+**この計画は10/24深夜に第5章までの実装を終えて完了しました。以降は[AI学習から提出までの日別計画](#ai-plan)に従います。** 以下は記録として残します。
 
 2026年10月21日（水）から10月26日（月）までの6日間で、**Direct3D 11の画面を見ながら、WASDで1ステージを遊べる状態**を目指します。対象は第1〜5章と第9章9.2の人間操作に関する確認です。第6〜8章のAI観測・学習・保存は10/27以降に進めます。
 
@@ -121,6 +124,86 @@ tests/
 装飾、ゴールテープの凝った表現、テクスチャ、複数ステージ、外部ステージ読込、新しい障害物、音、独自シェーダー、AI関連はこの6日間には追加しません。GUIは1ステージの選択・開始と状態確認に絞ります。シミュレーションと描画の分離、固定時間刻み、衝突・終了・リセットの確認は維持します。
 
 10/25終了時点で手動プレイが通らなければ、残作業を10/26の4時間で解消できるか見直します。難しい場合は「画面表示」「操作」「ゲームルール」のどこまで動いたかと未解決事項を記録し、完成扱いにせず時間追加または期限調整を判断します。この短期計画は、11/16に向けたAI学習・保存・再実行の目標を置き換えるものではありません。
+
+<a id="ai-plan"></a>
+
+## 10/25〜11/16 AI学習から提出までの日別計画
+
+10/24深夜の時点で、第5章（手動プレイ）までの実装が終わりました（ユーザー報告。コミット`615cac6`「遊べるゲームの完成」）。この計画は、残りの第6〜9章を終えて、2026年11月16日（月）のES提出に間に合わせるためのものです。
+
+### 前提と時間の目安
+
+| 項目 | 内容 |
+| --- | --- |
+| 期間 | 10/25（日）〜11/15（日）の22日間。11/16は提出日で、開発作業は入れない |
+| 1日の時間 | 平日1.5時間、土日・祝日4時間（11/3は文化の日） |
+| 合計 | 約53時間（作業約45時間＋予備約8時間）。週あたり約16時間で、従来の週15時間より少し多い |
+| 必須成果 | 1ステージで学習によりプレイが改善する様子を示す／学習結果を保存する／保存したAIを画面で動かす |
+| 後回し | ステージクリア、複数ステージ、マスの種類を5つに増やす改良、学習の中断・再開、GUIでのモデル選択 |
+
+時間は教材の分量からの見積もりで、実測ではありません。平日に時間が取れない日は、その日の作業を次の土日へ回します。下の「判断日」で遅れを確認してください。
+
+報酬は既存コアの`step()`に実装済み（到達記録の更新分＋時間ペナルティ0.001、成功+10、衝突−1）です。そのため、報酬は新しく作らず、学習結果を見て調整する扱いにしています。
+
+### 第1週：観測・行動・遺伝操作（10/25〜11/1、約19.5時間）
+
+| 日付 | 時間 | 作業（教材） | その日の完了条件 |
+| --- | --- | --- | --- |
+| 10/25（日） | 4時間 | 6.1〜6.4：`Cell`、`neighborOffsets`、`classifyCell`、`observe`、`toIndex`。CMakeに`policy_tests`を追加 | `toIndex`の確認の目安（0、65535、1、4）がテストで通る |
+| 10/26（月） | 1.5時間 | 6.5：`Genome`、`actionCount`、`choose` | 「ある番号だけ`Up`」のテストが通る |
+| 10/27（火） | 1.5時間 | 6.6：`Controller` | 6回目まで同じ行動を維持し、`reset()`で初期化されるテストが通る |
+| 10/28（水） | 1.5時間 | 6.7：`Metrics`、`evaluate` | 全要素`Stop`の表と全要素`Up`の表で、`end`と`distance`が予想どおりになる |
+| 10/29（木） | 1.5時間 | 6.8：空きマス・障害物の位置・優先順位・フィールド外のテスト | 観測のテストがすべて通る |
+| 10/30（金） | 1.5時間 | 6.8の残り＋予備。第6章で書いた関数を説明できるか見直す | **判断日①**：第6章のテストがすべて通る |
+| 10/31（土） | 4時間 | 7.1〜7.2：`Individual`、`initialPopulation`、`evaluatePopulation`、`nextGeneration` | ヘッドレスの一時コードで、初期集団の評価から2世代先まで動き、最良値を表示できる |
+| 11/1（日） | 4時間 | 7.3の遺伝操作テスト（2時間）。8.2の`stageText`、`modelText`、`saveAgent`に着手（2時間） | 7.3の6項目のテストが通る。保存ファイルが書け、中身を目で確認できる |
+
+### 第2週：保存・CLI・画面再生・学習実験（11/2〜11/8、約18時間）
+
+| 日付 | 時間 | 作業（教材） | その日の完了条件 |
+| --- | --- | --- | --- |
+| 11/2（月） | 1.5時間 | 8.2：`loadAgent` | 保存したファイルを読み戻せる |
+| 11/3（火・祝） | 4時間 | 8.4の往復・破損テスト。8.3のCLIをコピーしてビルドし、`--generations 0`、`2`、`evaluate`を実行 | **判断日②**：ヘッドレスで学習・保存・評価ができる |
+| 11/4（水） | 1.5時間 | 8.5：`WindowsMain.cpp`で保存済みAIを読み込み、`Controller`で操作する | 保存済みAIがゲーム画面で動く |
+| 11/5（木） | 1.5時間 | 8.5の残り。終了時の自動再開、ImGuiの開始ボタン、9.2の「保存済みAI」行を確認 | **判断日③**：必須成果の3つの仕組みがそろう |
+| 11/6（金） | 1.5時間 | 学習実験1：`train --generations 20`をCSVへ出力。6.7の任意課題で、訪れた状況の数を表示 | 世代ごとの最良・平均・到達距離の推移を記録できる |
+| 11/7（土） | 4時間 | 学習実験2：改善が小さければ、下の「調整の順番」で1つずつ変えて再実験 | 初期世代より到達距離が伸びる設定の候補が見つかる |
+| 11/8（日） | 4時間 | 学習実験3：学習シードを変えて2〜3回実験し、提出用の設定と代表個体（初期・途中・最終）を決める | **判断日④**：改善を示せる保存ファイル一式がそろう |
+
+**調整の順番（1回に1つだけ変える）。** 変えた項目と結果は、毎回CSVのファイル名とメモに残します。
+
+1. 世代数を増やす（20→50→100）。9.1の計測結果から、実行時間を見積もってから増やす。
+2. 突然変異率（0.01→0.005や0.02）。訪れた状況の数と、エリートの成績の変化を見て判断する。
+3. ステージの難度（障害物の速度・位相・本数）。初期集団でも少し進め、途中で詰まる程度にする。
+4. マス幅（1.5→1.0など）。変えたら`modelText()`も変わり、以前の保存ファイルは読めなくなる。
+5. 報酬の重み。変えた実験同士の適応度は比べず、到達距離で比べる。
+
+`modelText()`や`stageText()`に関わる設定を変えると、古い保存ファイルは読み込みで失敗します。これは意図した動作です。比較に使う個体は、最後に同じ設定でまとめて作り直します。
+
+### 第3週：計測・比較・提出物（11/9〜11/15、約15.5時間）
+
+| 日付 | 時間 | 作業（教材） | その日の完了条件 |
+| --- | --- | --- | --- |
+| 11/9（月） | 1.5時間 | 9.1：Releaseビルドで評価時間と学習時間を測る | CPU・構成・世代数・時間を記録できる |
+| 11/10（火） | 1.5時間 | 9.3：初期・途中・最終世代の到達距離を同じ条件で比べる表を作る | 比較表と、改善の説明が1段落で書ける |
+| 11/11（水） | 1.5時間 | デモ動画の録画：人間のプレイ、初期・途中・最終世代のAI | 各場面の素材がそろう |
+| 11/12（木） | 1.5時間 | README：ビルド、操作、学習コマンド、保存ファイルの配置、比較条件、既知の制約 | 初めて読む人が手順を追える |
+| 11/13（金） | 1.5時間 | 9.2の画面の最終確認（10/26に予定していた人間操作の確認を含む）。Debug・Releaseのビルド、全テスト。**機能凍結** | 以後は不具合修正と文書だけにする |
+| 11/14（土） | 4時間 | 別フォルダーへcloneしてREADMEの手順でビルド。デモ動画の編集。handoff・todo・仕様書を実装に合わせて更新 | 提出物の候補がそろう |
+| 11/15（日） | 4時間 | 技術説明の整理（Direct3Dの初期化、固定時間刻み、ゲームと描画の分離、行動表と遺伝操作）。残りは予備。GitHubへのpush | ES・ポートフォリオに載せる文章と動画のリンクが確定する |
+| 11/16（月） | — | ES提出 | — |
+
+### 遅れたときの調整
+
+| 判断日 | 未達の場合 |
+| --- | --- |
+| ①10/30 | 10/31の前半を第6章に使う。7.3のテストは「シードの再現・エリート保存・値の範囲」の3つに絞る |
+| ②11/3 | 11/4〜11/5の画面再生を11/6へずらし、学習実験1を11/7に統合する。保存形式の破損テストは「バージョン違い・要素数違い」の2例に絞る |
+| ③11/5 | 画面再生は「ファイル名を固定して読み込み、自動再開する」だけにし、ImGuiとの統合は後回しにする |
+| ④11/8 | 11/9〜11/10を実験に回し、計測を簡略化する。11/10になっても改善が出なければ、障害物を減らすなどステージを簡単にし、「改善する様子を示す」ことを優先する |
+| 11/13 | 機能追加はやめる。未完成の項目は「未実装」とREADMEに明記して提出する |
+
+第2週以降、時間のかかる学習は寝る前や外出前に実行しておき、翌日の作業時間に結果を確認すると、平日の短い時間を有効に使えます。
 
 <a id="chapter-1"></a>
 
@@ -250,7 +333,7 @@ const State& state() const;
 
 ### 2.3 配列と寿命
 
-数が固定された36個の入力には`std::array<float, 36>`、ステージによって数が違う壁には`std::vector<Rect>`を使います。どちらも自分のデータを所有し、寿命が終わると解放します。最初から`new`や`delete`を使う必要はありません。
+数が固定された8マスの観測には`std::array<Cell, 8>`、ステージによって数が違う壁には`std::vector<Rect>`を使います。どちらも自分のデータを所有し、寿命が終わると解放します。最初から`new`や`delete`を使う必要はありません。
 
 描画の章では`std::unique_ptr`と`ComPtr`が登場します。前者は1つの所有者が動的オブジェクトを管理し、後者はDirect3Dが使うCOMオブジェクトの参照を管理します。資源の取得と解放をオブジェクトの寿命へ結び付ける考え方がRAIIです。
 
@@ -1667,182 +1750,189 @@ COMの詳細、Win32の呼び出し規約、MRT、flip modelの比較、自作�
 
 ## 第6章 周辺を観測して行動を決める
 
-### 6.1 位置を入力する代わりに、周囲をマスへ分ける
+第6章と第7章は、関数名・型・引数・手順だけを示し、コードは自分で書く章です。宣言だけのコードブロックは、名前と引数をそろえるための見本です。第8章のCLIはここで決めた名前を呼ぶので、名前と引数は表のとおりにしてください。
 
-プレイヤーの近くに障害物があるとき、人間は少し待ったり横へ避けたりします。AIにも、行動を変えるための情報が必要です。企画に合わせ、周辺を3×3のマスに分け、各マスに壁と障害物があるかを入力します。
+### 6.1 この章で作るAIの形
 
-1時点では`3×3×2 = 18`個、前回の観測と合わせると36個です。現在のマスも過去のマスも、それぞれの時点のプレイヤーが中心です。配置の変化にはプレイヤー自身の移動も混ざるので、この差だけで障害物の速度を一意に復元できるわけではありません。
+人間は障害物が近いと待ったり避けたりします。AIにも「いま周りに何があるか」に応じて行動を変える仕組みが必要です。本作では、状況ごとに「この状況ならこの行動」と決めた**行動表**をAIの中身にし、第7章でその表を遺伝的アルゴリズムで育てます。
 
-### 6.2 入力を行動へ変換する計算
+処理は次の4段階です。
 
-ニューラルネットワークの各ユニットは、入力に重みを掛けて足し、バイアスを加えます。隠れ層では`tanh`を通して値を−1〜1へ収めます。最後の9個の出力のうち最大のものを行動にします。
+1. プレイヤーを中心に周辺を3×3のマスに分け、自分のマスを除く8マスそれぞれに何があるかを1バイトの種類で表す（合計8バイト）。
+2. 8マスの種類の組み合わせを、行動表の番号（0〜65535）へ変換する。
+3. 行動表のその番号に書かれた行動（停止＋8方向の9行動のどれか）を選ぶ。
+4. 行動表全体を1個体の遺伝子とし、交叉・突然変異で次の世代を作る（第7章）。
 
-重みを変えると、同じ観測から違う行動が選ばれます。この重みとバイアス745個を、次の章で遺伝的アルゴリズムが変更します。ここでは逆伝播や勾配計算は使いません。
+ニューラルネットワーク、重み、逆伝播は使いません。表を読むだけなので、ある状況でなぜその行動を選んだのかを、表の1要素を見れば説明できます。
 
-**完全例：`src/ai/Policy.hpp`**
+**教材での選択（第6〜8章共通）**
+
+| 対象 | 教材での選択 | 変えたときの影響 |
+| --- | --- | --- |
+| マス幅 | 1.5 | 観測の意味が変わるため、保存済み個体は使えなくなる |
+| マスの種類 | 空き・壁・障害物・ゴールの4種類 | 種類数をKとすると、表の長さはKの8乗 |
+| 重なったときの優先 | 障害物＞ゴール＞壁＞空き | 観測の意味が変わる |
+| フィールド外 | 壁として扱う | 観測の意味が変わる |
+| 行動決定 | 6更新ごと（0.1秒）。次の決定まで行動を維持 | 学習時と再生時で一致させる |
+| 行動の番号 | `Direc`の宣言順（`Stop`＝0〜`DownLeft`＝8） | 宣言順を変えると保存済み個体の意味が変わる |
+
+これらの値は動く例を作るための仮の選択です。学習性能を検証した設定ではありません。
+
+### 6.2 マスの種類を1バイトで表す（課題6-A：自分で書く）
+
+`src/ai/Policy.hpp`を作り、`core/Simulation.hpp`をincludeして、`namespace sil`の中に次を用意します。コアと同じく、Windows・DirectX・ImGuiのヘッダーは含めません。
+
+| 名前 | 種類 | 内容 |
+| --- | --- | --- |
+| `Cell` | `enum class`。基底型`std::uint8_t` | `Empty`、`Wall`、`Obstacle`、`Goal`の順。値は0〜3 |
+| `cellKinds` | `inline constexpr std::size_t` | 4。`Cell`の列挙子の数 |
+| `neighborCount` | `inline constexpr std::size_t` | 8。観測するマスの数 |
+| `cellWidth` | `inline constexpr float` | 1.5。1マスの幅 |
+| `decisionSteps` | `inline constexpr int` | 6。行動を決め直す間隔（更新回数） |
+| `Observation` | `std::array<Cell, neighborCount>`の別名（`using`） | 8マス分の観測 |
+
+- `enum class Cell : std::uint8_t`のように基底型を書くと、1要素が1バイトになります。`static_assert(sizeof(Observation) == 8);`をヘッダーに置くと、8バイトであることをコンパイル時に確かめられます。
+- `enum class`は整数へ暗黙に変換されません。番号として使う場所では`static_cast<std::size_t>(cell)`のように明示します。
+- `inline constexpr`は、ヘッダーに置いた定数を複数の`.cpp`から使っても重複定義にならないための指定です。
+
+**8マスの並び順。** 並び順は保存形式の一部になるので固定します。教材では、上の行の左→右、中央の行の左→右（自分のマスを飛ばす）、下の行の左→右とします。Zが奥（ゴール方向）なので、行の+1が画面の上です。
+
+| 添字 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 列（X方向） | −1 | 0 | +1 | −1 | +1 | −1 | 0 | +1 |
+| 行（Z方向） | +1 | +1 | +1 | 0 | 0 | −1 | −1 | −1 |
+
+この表を`neighborOffsets`という`inline constexpr std::array`にしておくと、ループで使えます。要素の型は、列と行の2つの`int`を持つ小さな構造体か、`std::array<int, 2>`です。
+
+### 6.3 周辺を観測する（課題6-B：自分で書く）
 
 ```cpp
-#pragma once
-#include "core/Simulation.hpp"
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <cstddef>
+// 宣言の見本。本体は自分で書く。
+Cell classifyCell(const Stage& stage, const State& state, const Rect& cell);
+Observation observe(const Environment& env);
+```
 
-namespace sil {
-inline constexpr float cellWidth = 1.5f;
-inline constexpr int decisionSteps = 6;
-using Frame = std::array<float, 18>;
-using Input = std::array<float, 36>;
-using Genome = std::array<float, 745>;
+**`classifyCell`** は、1マス分の長方形に何があるかを、1つの`Cell`で返します。
 
-inline Frame observe(const Environment& env) {
-    Frame values{};
-    const auto& s = env.stage();
-    const auto& state = env.state();
-    std::size_t index = 0;
-    for (int row = 1; row >= -1; --row) {
-        for (int col = -1; col <= 1; ++col) {
-            const Rect cell{{state.player.x + col * cellWidth, state.player.z + row * cellWidth},
-                            {cellWidth / 2, cellWidth / 2}};
-            const auto b = s.bounds;
-            bool wall = cell.center.x - cell.half.x < b.center.x - b.half.x
-                || cell.center.x + cell.half.x > b.center.x + b.half.x
-                || cell.center.z - cell.half.z < b.center.z - b.half.z
-                || cell.center.z + cell.half.z > b.center.z + b.half.z;
-            for (const auto& w : s.walls) wall = wall || overlaps(cell, w);
-            bool obstacle = false;
-            for (const auto& o : state.obstacles) obstacle = obstacle || overlaps(cell, o);
-            values[index++] = wall ? 1.0f : 0.0f;
-            values[index++] = obstacle ? 1.0f : 0.0f;
-        }
-    }
-    return values;
-}
+| 引数 | 使い方 |
+| --- | --- |
+| `stage` | 壁`stage.walls`、フィールド範囲`stage.bounds`、ゴール`stage.goal`を読む |
+| `state` | 現在の障害物`state.obstacles`を読む。`stage.obstacles`は初期設定なので使わない |
+| `cell` | 調べるマス。`center`がマスの中心、`half`が半分の大きさ（x、zとも`cellWidth / 2`） |
 
-inline Action choose(const Genome& genes, const Input& input) {
-    std::array<float, 16> hidden{};
-    std::size_t k = 0;
-    for (auto& value : hidden) {
-        float sum = 0;
-        for (float x : input) sum += genes[k++] * x;
-        sum += genes[k++];
-        value = std::tanh(sum);
-    }
-    std::array<float, 9> output{};
-    for (auto& value : output) {
-        for (float h : hidden) value += genes[k++] * h;
-        value += genes[k++];
-    }
-    // 同点なら先に並ぶ行動を選ぶ。保存形式にもこの順序を記録する。
-    constexpr std::array actions{Action::Stop, Action::Up, Action::Down, Action::Left,
-        Action::Right, Action::UpRight, Action::DownRight, Action::UpLeft, Action::DownLeft};
-    const auto best = std::max_element(output.begin(), output.end());
-    return actions[static_cast<std::size_t>(best - output.begin())];
-}
+- 判定には既存の`overlaps(Rect, Rect)`を使います。
+- 優先順に調べ、当てはまった時点で返します。障害物と重なる→`Obstacle`、ゴールと重なる→`Goal`、壁と重なるかフィールドから一部でもはみ出す→`Wall`、どれでもない→`Empty`。
+- フィールドからのはみ出しは、`cell`の左右上下の端（`center ± half`）と`bounds`の端を比べて求めます。`overlaps`は「重なっているか」しか分からず、「中に収まっているか」は分からないので別に書きます。
 
+**`observe`** は、`env.state().player.pos`を中心に`neighborOffsets`の8マスを作り、それぞれを`classifyCell`で分類して`Observation`へ詰めて返します。
+
+- マスの中心は「プレイヤー位置＋オフセット×`cellWidth`」です。
+- 自分のマスは調べません。プレイヤー自身は障害物として数えません。
+- `observe`は環境を変更しないので、`const Environment&`で受け取ります。
+
+**考えてみる。** 障害物が2マスにまたがると、両方のマスが`Obstacle`になります。「少しでも重なれば」その種類とした理由と、「マスの中心が入っていれば」に変えた場合に何が起きるかを説明できるようにしてください。
+
+### 6.4 8マスの観測を表の番号へ変換する（課題6-C：自分で書く）
+
+8バイトの観測をそのまま64ビットの整数とみなすと、番号は2の64乗通りになり、表を作れません。各マスが実際に取る値は4種類だけなので、観測を**4進数の8桁**とみなして番号へ詰めます。
+
+- 番号の範囲は0〜4⁸−1＝65535です。
+- 添字0のマスを一番下の桁（4⁰の位）、添字7を一番上の桁（4⁷の位）とします。番号＝Σ `obs[i]`×4ⁱ です。
+- 定数`stateCount`（`inline constexpr std::size_t`）を4⁸として用意します。`cellKinds`を`neighborCount`回掛ける`constexpr`関数で求めると、種類数を変えても追従します。
+- 4種類の場合は1マス2ビットなので、「2ビット左シフトして足す」でも同じ番号になります。ただしシフト版は、種類数を5に増やすと使えなくなります。
+
+```cpp
+std::size_t toIndex(const Observation& obs);
+```
+
+確認の目安：全マス`Empty`なら0、全マス`Goal`なら65535、添字0だけ`Wall`なら1、添字1だけ`Wall`なら4。
+
+### 6.5 行動表から行動を選ぶ（課題6-D：自分で書く）
+
+| 名前 | 内容 |
+| --- | --- |
+| `actionCount` | 9。`Direc`の列挙子の数 |
+| `Genome` | `std::array<std::uint8_t, stateCount>`の別名。添字が観測の番号、値が行動の番号（0〜8） |
+
+```cpp
+Direc choose(const Genome& genes, const Observation& obs);
+```
+
+- `toIndex(obs)`で番号を求め、`genes`のその要素を`static_cast<Direc>(...)`で行動にします。
+- 行動の番号は`Direc`の宣言順（`Stop, Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft`）です。第8章の保存形式にもこの順を書きます。
+- 9以上の値は不正です。不正値を作らない責任は初期化・突然変異・読込にあり、`choose`は正しい値だけが来る前提にします。値の範囲はテストで確かめます。
+
+`Genome`は65,536バイト（64KB）あります。関数には`const Genome&`で渡し、不要なコピーを避けます。
+
+### 6.6 一定間隔で行動を決める（課題6-E：自分で書く）
+
+```cpp
+// 宣言の見本。メンバー関数の本体は自分で書く。
 class Controller {
 public:
-    explicit Controller(Genome genes) : genes_(genes) {}
-    void reset(const Environment& env) {
-        previous_ = observe(env);
-        count_ = 0;
-        held_ = Action::Stop;
-    }
-    Action next(const Environment& env) {
-        if (count_ % decisionSteps == 0) {
-            const Frame current = observe(env);
-            Input input{};
-            std::copy(current.begin(), current.end(), input.begin());
-            std::copy(previous_.begin(), previous_.end(), input.begin() + 18);
-            held_ = choose(genes_, input);
-            previous_ = current;
-        }
-        ++count_;
-        return held_;
-    }
+    explicit Controller(const Genome& genes);
+    void reset();
+    Direc next(const Environment& env);
 private:
-    Genome genes_;
-    Frame previous_{};
+    const Genome* genes_;
     int count_{};
-    Action held_{Action::Stop};
+    Direc held_{Direc::Stop};
 };
-
-struct Metrics {
-    float fitness{};
-    float distance{};
-    float survival{};
-    float lateral{};
-    End end{End::Running};
-};
-
-inline Metrics evaluate(const Genome& genes, std::uint32_t environmentSeed) {
-    Environment env(makeStage());
-    env.reset(environmentSeed);
-    Controller controller(genes);
-    controller.reset(env);
-    Metrics m;
-    float bestZ = env.stage().start.z;
-    while (env.state().end == End::Running) {
-        const float oldX = env.state().player.x;
-        const auto result = env.step(controller.next(env));
-        m.fitness += result.reward;
-        bestZ = std::max(bestZ, env.state().player.z);
-        m.lateral += std::abs(env.state().player.x - oldX);
-    }
-    m.distance = bestZ - env.stage().start.z;
-    m.survival = static_cast<float>(env.state().steps * Environment::dt);
-    m.end = env.state().end;
-    return m;
-}
-}
 ```
 
-`observe()`の並びは、上の行から下の行へ、各行は左から右へ、各マスでは壁・障害物の順です。境界への接触も長方形同士の重なりとして数える保守的な観測です。プレイヤー自身とゴールは入力に含めません。
+| メンバー | 役割 |
+| --- | --- |
+| コンストラクター | 表の場所を`genes_`へ覚えるだけで、64KBの表はコピーしない |
+| `reset()` | `count_`を0、`held_`を`Stop`へ戻す。前の試行の状態を持ち越さない |
+| `next(env)` | `count_`が`decisionSteps`の倍数のときだけ`observe(env)`と`choose`で`held_`を更新する。その後`count_`を1増やし、`held_`を返す |
 
-パラメーターは隠れユニットごとの「36個の重み、1個のバイアス」、出力ユニットごとの「16個の重み、1個のバイアス」の順です。`16×37 + 9×17 = 745`になります。この並びを変更すると、古い保存個体の意味も変わります。
+- **表の寿命はControllerより長くなければなりません。** 一時オブジェクトを渡すと、すぐに無効な場所を指します。参照メンバーではなくポインターにしたのは、Controllerを代入できるようにするためです。
+- `next()`は、シミュレーションの更新（`env.step()`）の直前に1回だけ呼びます。描画のたびに呼ぶと、画面の速さで判断の頻度が変わります。
+- 自動再開では、環境の`reset()`とControllerの`reset()`を両方呼びます。
 
-`Controller`は6更新ごと、つまり0.1秒ごとに行動を決めます。`next()`はシミュレーションの更新直前に1回だけ呼びます。描画のたびに呼ぶと、画面の速さでAIの判断頻度が変わります。自動再開時には環境とコントローラーの両方をリセットしてください。
+**この方式の限界。** 観測は「いま」だけなので、障害物が近づいているのか遠ざかっているのかは区別できません。改善したくなったら、例えば`Obstacle`を「近づく障害物」と「遠ざかる障害物」に分けて種類を5つにします。表の長さは5⁸＝390,625（約381KB）に増えますが、まだ扱えます。前回の8マスを並べて16マスにする方法は4¹⁶（約43億）通りになり、表では扱えません。種類を増やすほど、1度も訪れない状況が増える点とのトレードオフです。
 
-### 6.3 観測と行動をテストする
-
-**完全例：`tests/PolicyTests.cpp`**
+### 6.7 1個体を評価する（課題6-F：自分で書く）
 
 ```cpp
-#include "ai/Policy.hpp"
-#include <iostream>
-#include <stdexcept>
-
-void check(bool ok, const char* why) { if (!ok) throw std::runtime_error(why); }
-int main() {
-    try {
-        auto stage = sil::makeStage();
-        stage.walls.clear(); stage.obstacles.clear();
-        stage.obstacles.push_back({{{0, 0}, {0.1f, 0.1f}}, sil::Axis::X, 0, 1, 0, 0});
-        sil::Environment env(stage);
-        const auto frame = sil::observe(env);
-        check(frame[9] == 1, "center cell obstacle channel");
-        check(frame[8] == 0, "player is not wall");
-        sil::Genome zero{};
-        sil::Input input{};
-        check(sil::choose(zero, input) == sil::Action::Stop, "tie chooses stop");
-        // 隠れ層592個の後、上方向出力のバイアスだけを1にする。
-        zero[592 + 17 + 16] = 1;
-        check(sil::choose(zero, input) == sil::Action::Up, "output bias selects up");
-        stage.obstacles.clear();
-        sil::Environment playable(stage);
-        sil::Controller controller(zero);
-        controller.reset(playable);
-        playable.step(controller.next(playable));
-        check(playable.state().player.z > 0, "controller applies action");
-        controller.reset(playable);
-        check(controller.next(playable) == sil::Action::Up, "controller resets");
-        std::cout << "policy tests passed\n";
-    } catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
-}
+struct Metrics {
+    float fitness{};   // 累積報酬
+    float distance{};  // 開始位置から、試行中に到達した最大のZまでの差
+    float survival{};  // 終了までの秒数
+    float lateral{};   // 各更新のX方向の変位の絶対値の合計
+    GameState end{GameState::Running};
+};
+Metrics evaluate(const Genome& genes, std::uint32_t environmentSeed);
 ```
 
-**差し込み例：`CMakeLists.txt`の末尾に追加。**
+`evaluate`の手順は次のとおりです。
+
+1. `makeStage()`から`Environment`を作り、`reset(environmentSeed)`する。
+2. `genes`から`Controller`を作り、`reset()`する。
+3. 開始時のZ（`env.state().player.pos.z`）を、到達した最大Zの初期値として覚える。
+4. `env.state().gameState`が`Running`の間、更新前のXを覚える→`env.step(controller.next(env))`→戻り値の`reward`を`fitness`へ足す→最大Zと横移動量を更新する、を繰り返す。
+5. 終了後に`distance`、`survival`（`currentStep`×`Environment::dt`）、`end`を埋めて返す。
+
+`step()`が返す`StepResult`のメンバーは`end`と`reward`、`State`の終了状態は`gameState`です。名前の違いに注意してください。
+
+**任意課題。** 評価中に訪れた番号を`std::vector<bool>`などに記録して種類数を数えると、65,536通りのうち実際に使った状況の少なさが分かります。第7章で突然変異率を考える手がかりになります。
+
+### 6.8 観測と行動をテストする（課題6-G：自分で書く）
+
+`tests/PolicyTests.cpp`に、第4章と同じ`check`関数の形でテストを書きます。どのテストも「ステージを作る→必要な物だけ置く→`reset()`する→観測や行動を調べる」の順です。`makeStage()`の戻り値から`walls`と`obstacles`を空にし、`bounds`を十分広くすると、狙ったマスにだけ物を置けます。障害物は`speed`を0にすると、`reset()`後の位置を予想しやすくなります。
+
+| テスト | 用意する状況 | 期待する結果 |
+| --- | --- | --- |
+| 空きマス | 周りに何も置かない | 8マスすべて`Empty` |
+| 障害物の位置 | プレイヤーのZ+`cellWidth`の位置に小さな障害物 | 添字1だけ`Obstacle` |
+| 優先順位 | 同じマスに壁と障害物を置く | そのマスが`Obstacle` |
+| フィールド外 | プレイヤーを`bounds`の左端近くに置く | 添字0・3・5が`Wall` |
+| 番号変換 | 6.4の確認の目安 | 0、65535、1、4 |
+| 行動選択 | 全要素0の`Genome`で、ある番号の要素だけ1にする | その観測で`Up`、別の観測で`Stop` |
+| 行動の維持 | `Controller`で`next()`を連続で呼ぶ | 1回目に決めた行動が6回目まで続く |
+| リセット | 途中まで動かしたControllerを`reset()`する | 新しいControllerと同じ行動列になる |
+
+**差し込み例：`CMakeLists.txt`の末尾に追加（コピー可）。**
 
 ```cmake
 if(BUILD_TESTING)
@@ -1852,214 +1942,183 @@ if(BUILD_TESTING)
 endif()
 ```
 
-確認課題は、フィールド外のマス、壁と障害物の両方が存在するマス、前試行の履歴が残らないことです。履歴の確認には、2つの環境を使い、途中まで動かしたコントローラーをリセットした場合と、新しいコントローラーの場合の行動列を比較します。
+`policy_tests`が`src/`からのインクルードパスで`ai/Policy.hpp`を見つけられるか確認してください。見つからない場合は、`sphere_core`のインクルードディレクトリの設定を見直します。
 
 <a id="chapter-7"></a>
 
-## 第7章 遺伝的アルゴリズムで方策を育てる
+## 第7章 遺伝的アルゴリズムで行動表を育てる
 
-### 7.1 1個体の評価から1世代へ
+### 7.1 個体と世代の考え方
 
-ランダムな重みでは、球はゴールへ進むとは限りません。まず多数の個体を同じ条件で試し、良い成績の個体から次の世代を作ります。1世代で必ず改善するわけではないため、最良値だけでなく平均値と実際の到達距離も記録します。
+| 遺伝的アルゴリズムの用語 | 本作での意味 |
+| --- | --- |
+| 遺伝子座 | 行動表の1要素（ある観測番号に対応する場所） |
+| 対立遺伝子 | その要素の値（9行動のどれか） |
+| 個体 | 行動表1つ（`Genome`、65,536要素） |
+| 適応度 | 1試行の累積報酬（`Metrics::fitness`） |
+| 世代 | 全個体を評価し、次の集団を作る1周 |
 
-親の選択は、無作為に選んだ3個体の中から成績が最も良いものを選ぶ方式です。適応度が負でも、その大小を比較できます。交叉では各パラメーターを2親のどちらかから取り、突然変異では一部の値へ小さな乱数を加えます。
+ランダムな表では、球はゴールへ進むとは限りません。多数の個体を同じ条件で試し、成績の良い個体の表を混ぜたり書き換えたりして次の世代を作ります。1世代で必ず改善するわけではないため、最良値だけでなく平均値と到達距離も記録します。
 
-**完全例：`src/ai/Training.hpp`**
+**教材の設定値（性能を検証した値ではありません）**
+
+| 項目 | 設定 |
+| --- | --- |
+| 個体数 | 64 |
+| エリート | 上位4個体をそのまま次世代へ残す |
+| 親選択 | 無作為に選んだ3個体のうち、適応度が最大の個体（トーナメント選択） |
+| 交叉 | 一様交叉。要素ごとに2親のどちらかからコピーする |
+| 突然変異 | 要素ごとに確率0.01で、0〜8のランダムな行動へ置き換える |
+
+突然変異を「値に小さな乱数を足す」形にしないのは、行動の番号に大小の意味がないからです。`Up`（1）に1を足した`Down`（2）は「少し違う行動」ではありません。そのため値を置き換えます。
+
+確率0.01でも、65,536要素なら1個体あたり約655要素が変わります。ただし1回の試行で訪れる観測はごく一部なので、訪れない要素が変わっても成績には影響しません。6.7の任意課題で訪れた種類数を数え、変化が多すぎる・少なすぎると感じたら確率を調整します。
+
+### 7.2 必要な関数（課題7-A〜7-C：自分で書く）
+
+`src/ai/Training.hpp`を作り、`ai/Policy.hpp`、`<algorithm>`、`<random>`、`<stdexcept>`、`<vector>`をincludeします。
 
 ```cpp
-#pragma once
-#include "ai/Policy.hpp"
-#include <algorithm>
-#include <random>
-#include <stdexcept>
-#include <vector>
-
-namespace sil {
+// 宣言の見本。本体は自分で書く。
 struct Individual { Genome genes{}; Metrics metrics{}; };
 
-inline std::vector<Individual> initialPopulation(std::mt19937& random, int count = 64) {
-    if (count < 4) throw std::invalid_argument("population must be at least four");
-    std::normal_distribution<float> weight(0.0f, 0.2f);
-    std::vector<Individual> population(static_cast<std::size_t>(count));
-    for (auto& individual : population) {
-        for (float& gene : individual.genes) gene = weight(random);
-    }
-    return population;
-}
-
-inline void evaluatePopulation(std::vector<Individual>& population, std::uint32_t seed) {
-    for (auto& i : population) i.metrics = evaluate(i.genes, seed);
-    std::stable_sort(population.begin(), population.end(), [](const auto& a, const auto& b) {
-        return a.metrics.fitness > b.metrics.fitness;
-    });
-}
-
-inline std::vector<Individual> nextGeneration(const std::vector<Individual>& population, std::mt19937& random) {
-    if (population.size() < 4) throw std::invalid_argument("population too small");
-    std::uniform_int_distribution<std::size_t> pick(0, population.size() - 1);
-    std::bernoulli_distribution parentChoice(0.5);
-    std::bernoulli_distribution mutate(0.1);
-    std::normal_distribution<float> noise(0.0f, 0.1f);
-    const auto tournament = [&]() -> const Genome& {
-        std::size_t best = pick(random);
-        for (int i = 1; i < 3; ++i) {
-            const auto candidate = pick(random);
-            if (population[candidate].metrics.fitness > population[best].metrics.fitness) best = candidate;
-        }
-        return population[best].genes;
-    };
-    std::vector<Individual> next;
-    next.reserve(population.size());
-    for (std::size_t i = 0; i < 4; ++i) next.push_back(population[i]);
-    while (next.size() < population.size()) {
-        const auto& a = tournament();
-        const auto& b = tournament();
-        Individual child;
-        for (std::size_t k = 0; k < child.genes.size(); ++k) {
-            child.genes[k] = parentChoice(random) ? a[k] : b[k];
-            if (mutate(random)) child.genes[k] += noise(random);
-        }
-        next.push_back(child);
-    }
-    return next;
-}
-}
+std::vector<Individual> initialPopulation(std::mt19937& random, int count = 64);
+void evaluatePopulation(std::vector<Individual>& population, std::uint32_t seed);
+std::vector<Individual> nextGeneration(const std::vector<Individual>& population,
+                                       std::mt19937& random, double mutationRate = 0.01);
 ```
 
-この関数は、入力集団が適応度順に評価・整列済みであることを前提にします。先頭4個体は変更せず残します。子に前世代の評価値を使わず、次の世代で必ず全個体を評価し直します。
+**課題7-A：`initialPopulation`**
+
+| 引数 | 使い方 |
+| --- | --- |
+| `random` | 学習用の乱数生成器。呼び出し側が持ち、同じシードなら同じ集団になる |
+| `count` | 個体数。エリート数の4より少なければ`std::invalid_argument`で拒否する |
+
+- `random`を参照で受け取るのは、呼び出し後も乱数列の続きを使うためです。値渡しにすると内部状態がコピーされ、次の世代で同じ乱数を繰り返してしまいます。
+- 全個体の全要素を0〜8の一様乱数で埋めます。分布は`std::uniform_int_distribution<int>(0, static_cast<int>(actionCount) - 1)`で作り、値を`static_cast<std::uint8_t>`して入れます。**`std::uniform_int_distribution<std::uint8_t>`は標準で認められていない型**なので、`int`で作ってから変換します。
+- 64個体×64KBで約4MBです。`std::vector`の要素はヒープに置かれるので問題ありませんが、`Individual`のローカル変数を大量に作る書き方は避けます。
+
+**課題7-B：`evaluatePopulation`**
+
+- 全個体に`evaluate(genes, seed)`を行い、結果を`metrics`へ入れます。
+- その後、`fitness`の大きい順に`std::stable_sort`で並べます。同点の順序を保つ`stable_sort`にすると、結果が決定的になります。
+- 比較関数は「aをbより前に置くならtrue」を返すラムダです。
+
+**課題7-C：`nextGeneration`**
+
+前提は、`population`が評価・整列済みであることです。4個体未満なら例外にします。
+
+1. 先頭4個体をそのまま新しい集団へコピーする（エリート）。
+2. 新しい集団が元の個体数になるまで、次を繰り返す。
+   1. トーナメントで親Aを選ぶ。集団から無作為に3個体を選び（重複可）、`fitness`が最大の個体にする。親Bも同じ方法で選ぶ。
+   2. 子の各要素について、確率0.5で親Aの値、そうでなければ親Bの値をコピーする。
+   3. 確率`mutationRate`で、その要素を0〜8の乱数に置き換える。
+   4. 子の`metrics`は空のままにする。親の成績は引き継がず、次の世代で必ず評価し直す。
+
+| 使う道具 | 用途 |
+| --- | --- |
+| `std::uniform_int_distribution<std::size_t>(0, 個体数 - 1)` | トーナメントで個体を選ぶ |
+| `std::bernoulli_distribution(0.5)` | 各要素をどちらの親から取るか |
+| `std::bernoulli_distribution(mutationRate)` | その要素を突然変異させるか |
+| 7-Aと同じ行動の分布 | 置き換える行動 |
+
+- トーナメントは小さなラムダにまとめ、選んだ個体の`const Genome&`を返すと64KBのコピーを避けられます。
+- `mutationRate`を引数にしたのは、テストで0や1を指定するためです。CLIからは既定値の0.01で呼ばれます。
+
+**乱数を使う順番も結果の一部です。** 分布を呼ぶ順番を変えると、同じシードでも別の集団になります。決定性のテストが通った後で順番を変えたら、以前の学習結果とは同じ条件で比べられません。
 
 同じ環境シードを全個体に渡しますが、この教材のステージ自体には乱数がありません。決定的な方策を同じ条件で繰り返しても、多様な条件での強さを測ったことにはなりません。学習用シードを変えた独立実験と、同じ個体の評価回数を増やすことを区別してください。
 
-### 7.2 遺伝操作の確認
+### 7.3 遺伝操作の確認（課題7-D：自分で書く）
 
-初回の動作確認では4個体に減らし、エリートが変更されないことを確かめます。交叉と突然変異を調べる場合は8個体以上に戻します。4個体だと全個体がエリートになり、探索は進みません。
+`PolicyTests.cpp`で`Training.hpp`をincludeし、次を確かめます。個体数は8で行います。4個体だと全個体がエリートになり、交叉と突然変異が働きません。
 
-**確認用の差し込み例：第6章のテストで`Training.hpp`をincludeし、`try`内へ追加。**
+| 確認 | 方法 |
+| --- | --- |
+| シードの再現 | 同じシードの`std::mt19937`を2つ作り、`initialPopulation`の結果の`genes`が一致する |
+| 値の範囲 | 初期集団と次世代の全要素が9未満 |
+| 個体数 | `nextGeneration`の前後で個体数が同じ |
+| エリート保存 | 次世代の先頭4個体の`genes`が、評価・整列後の先頭4個体と一致する |
+| 突然変異なし | 全個体を同じ表にして`mutationRate`を0にすると、次世代も全員が同じ表 |
+| 突然変異あり | 同じ条件で`mutationRate`を1にすると、エリート以外の表が元と異なる（元と一致する要素はおよそ9分の1） |
 
-```cpp
-std::mt19937 randomA(123), randomB(123);
-auto populationA = sil::initialPopulation(randomA, 8);
-auto populationB = sil::initialPopulation(randomB, 8);
-check(populationA[0].genes == populationB[0].genes, "seeded initial population");
-sil::evaluatePopulation(populationA, 42);
-auto next = sil::nextGeneration(populationA, randomA);
-check(next.size() == populationA.size(), "population size preserved");
-check(next[0].genes == populationA[0].genes, "elite preserved");
-```
+`std::array`同士は`==`で全要素を比較できます。
 
-乱数生成器の状態が同じなら同じ列を生成できますが、正規分布の変換方法や浮動小数点の計算が実装によって違うため、異なる標準ライブラリ・OS間で同じ学習結果になるとは主張しません。
+乱数生成器の状態が同じなら同じ列を生成できますが、`uniform_int_distribution`などの分布の変換方法は標準ライブラリの実装によって違います。異なる標準ライブラリ・OS間で同じ学習結果になるとは主張しません。
 
 <a id="chapter-8"></a>
 
 ## 第8章 保存・読み込み・CLIを作る
 
-### 8.1 重みだけでは再実行条件が足りない
+### 8.1 行動表だけでは再実行条件が足りない
 
-同じ重みでも、観測のマス幅や行動の並びが違えば行動は変わります。ステージの障害物速度や制限時間が違う場合も、学習時とは別条件です。重みと一緒に、その意味を決める条件を保存します。
+同じ行動表でも、マス幅、マスの種類と優先順位、8マスの並び、番号の桁の順、行動の番号が違えば、選ばれる行動は変わります。ステージの障害物速度や制限時間が違う場合も、学習時とは別条件です。行動表と一緒に、その意味を決める条件を保存します。
 
 教材では読めるテキスト形式を使い、構成を固定したバージョン1とします。ステージ設定は文字列化して保存し、現在の`makeStage()`と一致する場合だけ受け入れます。対応する設定を現在のコードから復元する方式なので、異なるステージの保存ファイルを読む汎用形式ではありません。条件を変えたら読み込みで明示的に失敗し、黙って別条件で実行しないことを優先します。
 
-### 8.2 保存形式の完全例
+### 8.2 保存形式（課題8-A：自分で書く）
 
-**完全例：`src/ai/AgentFile.hpp`**
+`src/ai/AgentFile.hpp`を作り、`ai/Training.hpp`、`<cmath>`、`<fstream>`、`<iomanip>`、`<limits>`、`<sstream>`、`<string>`をincludeします。
 
 ```cpp
-#pragma once
-#include "ai/Training.hpp"
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <limits>
-#include <sstream>
-#include <string>
-
-namespace sil {
-inline std::string stageText() {
-    std::ostringstream out;
-    out << std::setprecision(std::numeric_limits<float>::max_digits10);
-    const auto vec = [&](Vec2 v) { out << v.x << ' ' << v.z << ' '; };
-    const auto rect = [&](Rect r) { vec(r.center); vec(r.half); };
-    const auto s = makeStage();
-    rect(s.bounds); vec(s.start);
-    out << s.radius << ' ' << s.speed << ' ' << s.maxSteps << ' ';
-    rect(s.goal);
-    out << s.walls.size() << ' ';
-    for (const auto& w : s.walls) rect(w);
-    out << s.obstacles.size() << ' ';
-    for (const auto& o : s.obstacles) {
-        rect(o.box);
-        out << static_cast<int>(o.axis) << ' ' << o.low << ' ' << o.high << ' '
-            << o.speed << ' ' << o.phase << ' ';
-    }
-    return out.str();
-}
-
-inline std::string modelText() {
-    // 行動順、パラメーター順、観測の並び・占有規則も形式の一部。
-    return "3x3-cell1.5-wall-obstacle-current-previous-rowTopLeft-inclusive;"
-        "36-16tanh-9argmax;hidden-unit-weights-bias-output-unit-weights-bias;"
-        "Stop-Up-Down-Left-Right-UpRight-DownRight-UpLeft-DownLeft;"
-        "decision6-dt1/60-substeps4;reward-recordZ1-time0.001-success10-hit-1";
-}
+// 宣言の見本。本体は自分で書く。
+std::string stageText();
+std::string modelText();
 struct SavedAgent {
     Genome genes{};
     int generation{};
     std::uint32_t environmentSeed{}, trainingSeed{};
     Metrics metrics{};
 };
-
-inline void saveAgent(const std::string& path, const SavedAgent& agent) {
-    std::ofstream out(path);
-    if (!out) throw std::runtime_error("cannot open agent output: " + path);
-    out << std::setprecision(std::numeric_limits<float>::max_digits10);
-    out << "SIL_AGENT_V1\n" << std::quoted(stageText()) << '\n' << std::quoted(modelText()) << '\n';
-    out << agent.generation << ' ' << agent.environmentSeed << ' ' << agent.trainingSeed << '\n';
-    const auto m = agent.metrics;
-    out << m.fitness << ' ' << m.distance << ' ' << m.survival << ' ' << m.lateral << ' '
-        << static_cast<int>(m.end) << '\n';
-    out << agent.genes.size() << '\n';
-    for (float gene : agent.genes) out << gene << '\n';
-    out.close();
-    if (!out) throw std::runtime_error("agent write failed: " + path);
-}
-
-inline SavedAgent loadAgent(const std::string& path) {
-    std::ifstream in(path);
-    if (!in) throw std::runtime_error("cannot open agent input: " + path);
-    std::string magic, stage, model;
-    if (!(in >> magic >> std::quoted(stage) >> std::quoted(model))
-        || magic != "SIL_AGENT_V1" || stage != stageText() || model != modelText()) {
-        throw std::runtime_error("unsupported agent format or configuration");
-    }
-    SavedAgent agent;
-    int end = 0;
-    std::size_t count = 0;
-    auto& m = agent.metrics;
-    if (!(in >> agent.generation >> agent.environmentSeed >> agent.trainingSeed
-        >> m.fitness >> m.distance >> m.survival >> m.lateral >> end >> count)
-        || agent.generation < 0 || end < 1 || end > 3 || count != agent.genes.size()
-        || !std::isfinite(m.fitness) || !std::isfinite(m.distance)
-        || !std::isfinite(m.survival) || !std::isfinite(m.lateral)) {
-        throw std::runtime_error("invalid agent metadata");
-    }
-    m.end = static_cast<End>(end);
-    for (float& gene : agent.genes) {
-        if (!(in >> gene) || !std::isfinite(gene)) throw std::runtime_error("invalid agent weights");
-    }
-    in >> std::ws;
-    if (!in.eof()) throw std::runtime_error("unexpected agent trailing data");
-    return agent;
-}
-}
+void saveAgent(const std::string& path, const SavedAgent& agent);
+SavedAgent loadAgent(const std::string& path);
 ```
 
-`max_digits10`は、`float`を文字列にして読み戻すために十分な桁数です。既定の少ない桁数で保存すると、同じ重みへ戻らない場合があります。`std::quoted`は空白を含む設定文字列を1項目として読み書きします。
+**ファイルの中身。** 1行ごとに次の内容を書きます。
+
+```text
+SIL_AGENT_V1
+"stageText()の文字列"
+"modelText()の文字列"
+世代番号 環境シード 学習シード
+fitness distance survival lateral 終了理由の整数
+65536
+031250004871...（65,536文字。1文字が1要素の行動番号）
+```
+
+**`stageText`**：`makeStage()`の設定を空白区切りの文字列にします。`bounds`、`player.pos`、`player.radius`、`player.speed`、`maxSteps`、`goal`、壁の個数と各壁、障害物の個数と各障害物（`box`、整数にした`axis`、`low`、`high`、`speed`、`phase`）の順です。`std::ostringstream`に`std::setprecision(std::numeric_limits<float>::max_digits10)`を設定してから書きます。`max_digits10`は、`float`を文字列にして読み戻したとき元の値へ戻るのに十分な桁数です。
+
+**`modelText`**：観測と行動の決まりを1つの文字列で表した固定値です。例えば次のように、第6章で決めたことを全部入れます。
+
+```text
+neighbors8-cell1.5-rowsTopToBottom-skipCenter;kinds-Empty-Wall-Obstacle-Goal;priority-Obstacle-Goal-Wall;outside-Wall;index-base4-cell0Lowest;actions-Stop-Up-Down-Left-Right-UpRight-UpLeft-DownRight-DownLeft;decision6-dt1/60;reward-（自分のstep()の報酬計算）
+```
+
+第6章の選択や報酬を変えたら、この文字列も変えます。そうすれば古いファイルの読み込みが失敗し、別の意味の表で黙って動くことを防げます。
+
+**`saveAgent`**
+
+- `std::ofstream`で開き、失敗したら`std::runtime_error`を投げます。
+- 2つの設定文字列は`std::quoted`で書きます。空白を含む文字列を1項目として読み書きできます。
+- 成績の浮動小数点は`max_digits10`の桁数で書きます。
+- 行動表は要素数を書いた後、各要素を文字`'0'`〜`'8'`に変換し、1行に続けて書きます。数字の文字は`'0'`から連続しているので、`'0' + gene`を`char`へ変換すると、その数字の文字になります。
+- **落とし穴**：`std::uint8_t`は多くの環境で`unsigned char`の別名です。`out << gene`と書くと数字ではなく文字コード3や5の制御文字が出力されます。数値として書くなら`static_cast<int>(gene)`、1文字として書くなら上の変換を使います。
+- 最後に`close()`し、ストリームの状態を確認して、書き込み失敗も例外にします。
+
+**`loadAgent`**（不正なファイルは必ず例外にする）
+
+- 先頭が`SIL_AGENT_V1`、ステージ文字列が`stageText()`、モデル文字列が`modelText()`と一致しなければ失敗。
+- 世代番号が負、終了理由の整数が`Success`〜`Timeout`の範囲外、成績が有限でない（`std::isfinite`で調べる）なら失敗。
+- 要素数が`stateCount`と違えば失敗。
+- 行動表の行を`std::string`へ1語として読み、長さが`stateCount`か、全文字が`'0'`〜`'8'`かを確かめます。`c - '0'`で番号へ戻して`genes`へ入れます。
+- 最後に`in >> std::ws`で空白を読み飛ばし、`eof()`でなければ余計なデータがあるとして失敗。
 
 この形式は方策の保存です。集団全体、途中の評価状態、乱数生成器の内部状態は保存していないため、学習途中から同じ乱数列で再開する機能にはなりません。また、保存は指定先を上書きします。実験ごとに別の出力先を使ってください。途中書き込みによる破損への対策は、一時ファイルへ書いて成功後に置換する方法を追加課題とします。
 
 ### 8.3 コマンドラインから実験する
 
-以下は教材用CLIの完全例です。新しい依存関係を増やさず、`std::from_chars`で整数を読みます。文字列の一部だけが数値だった場合も、入力末尾まで消費したかを調べて拒否します。
+以下は教材用CLIの完全例です（コピー可）。第6〜8章の関数を、本文の名前と引数で用意していれば、そのまま呼び出せます。新しい依存関係を増やさず、`std::from_chars`で整数を読みます。文字列の一部だけが数値だった場合も、入力末尾まで消費したかを調べて拒否します。
 
 **完全例：`src/app/ExperimentMain.cpp`**
 
@@ -2198,14 +2257,15 @@ CSVの`best_distance`は世代内で到達距離が最大の個体の値です�
 
 ```cpp
 sil::SavedAgent original;
-original.genes[7] = 0.123456789f;
-original.metrics.end = sil::End::Timeout;
+original.genes[7] = 5;
+original.genes[sil::stateCount - 1] = 8;
+original.metrics.end = sil::GameState::Timeout;
 sil::saveAgent("roundtrip.sil", original);
 const auto restored = sil::loadAgent("roundtrip.sil");
-check(restored.genes == original.genes, "weights survive text roundtrip");
+check(restored.genes == original.genes, "action table survives text roundtrip");
 ```
 
-破損検査は、保存ファイルをコピーし、先頭のバージョン、パラメーター数、最後の重みを変更・削除して、読み込みが失敗するか確かめます。学習用の元ファイルは残してください。
+破損検査は、保存ファイルをコピーし、先頭のバージョン、要素数、行動表の文字（`9`や英字に変える、末尾を削って短くする）を変更して、読み込みが失敗するか確かめます。学習用の元ファイルは残してください。
 
 ### 8.5 保存済みAIを画面で動かす
 
@@ -2219,20 +2279,22 @@ check(restored.genes == original.genes, "weights survive text roundtrip");
 const auto saved = sil::loadAgent("run123_g20_distance.sil");
 env.reset(saved.environmentSeed);
 sil::Controller controller(saved.genes);
-controller.reset(env);
+controller.reset();
 ```
 
 ```cpp
 // 固定時間刻みの更新内で、人間の入力から行動を作る部分を置換。
 const auto result = env.step(controller.next(env));
-if (result.end != sil::End::Running) {
+if (result.end != sil::GameState::Running) {
     // ここで終了結果を画面表示用の変数へ記録する。
     env.reset(saved.environmentSeed);
-    controller.reset(env);
+    controller.reset();
 }
 ```
 
-第5章のもとの`env.step()`とリセット処理は残して二重に呼ばず、この処理へ置換してください。ImGui版では`if (playing)`の内側を置換し、開始ボタンで環境をリセットする際にも`saved.environmentSeed`を使って`controller.reset(env)`を呼びます。`Controller::next()`の呼び出しも1更新に1回です。モデル選択GUIを追加する場合は、読込失敗を画面に表示し、成功したファイルだけを実行します。教材の最初の到達点はファイル名をコード中で指定する方法です。
+`Controller`は`saved.genes`を参照するだけなので、`saved`はControllerを使い終わるまで破棄されない場所に置きます。上の例のように、メッセージループより前の同じスコープで宣言すれば問題ありません。
+
+第5章のもとの`env.step()`とリセット処理は残して二重に呼ばず、この処理へ置換してください。ImGui版では`if (playing)`の内側を置換し、開始ボタンで環境をリセットする際にも`saved.environmentSeed`を使って`controller.reset()`を呼びます。`Controller::next()`の呼び出しも1更新に1回です。モデル選択GUIを追加する場合は、読込失敗を画面に表示し、成功したファイルだけを実行します。教材の最初の到達点はファイル名をコード中で指定する方法です。
 
 <a id="chapter-9"></a>
 
@@ -2302,7 +2364,7 @@ READMEには、ビルド方法、操作、保存ファイルの配置、学習�
 | `--output` | 空でないパス接頭辞、既定`agent` | 世代番号・種類・拡張子を付けて保存。親フォルダーは作成済みとする。同名は上書き |
 | `--help` | 値なしの真偽フラグ、既定は非指定 | ヘルプを表示して終了 |
 
-個体数64、エリート4、トーナメント3、突然変異確率0.1・標準偏差0.1はコード内の教材設定です。CLIで変更するオプションは実装していません。保存は初期、中間、最終世代に行い、適応度最大と到達距離最大を別名で保存します。
+個体数64、エリート4、トーナメント3、要素ごとの突然変異（行動の置き換え）確率0.01はコード内の教材設定です。CLIで変更するオプションは実装していません。保存は初期、中間、最終世代に行い、適応度最大と到達距離最大を別名で保存します。
 
 ### `sphere_experiment evaluate`
 
@@ -2345,3 +2407,5 @@ READMEには、ビルド方法、操作、保存ファイルの配置、学習�
 WindowsのMSVCビルド、Direct3D 11の表示、DirectXTKとImGuiのリンク・実行は、この環境では未確認。第5章の完了条件をWindows実機で確認する。DirectXTKやImGuiのリビジョンを固定した後は、その版でビルドし直す。OSをまたぐ浮動小数点結果や学習結果の一致、学習性能、任意の高速設定での非貫通は保証していない。
 
 第5章は2026年10月22日に、5-Hまでの既習本文を残し、定型部分をコピーし、ゲームによって変わる処理を自分で書く構成へ改稿した。章構成、差し込み先、現在のコアAPI・依存ヘッダーとの対応、コードフェンスを静的に確認した。コピー用の基盤と自力実装の骨組みを含む教材であり、改稿後のWindowsビルド・リンク・画面表示は未検証。上記の2026年10月20日の検証記録は、改稿後の第5章の動作保証を表すものではない。
+
+第6〜8章は2026年10月25日に、ニューラルネットワークの重みを個体とする方式から、周辺8マスの観測番号ごとに行動を定めた行動表を個体とする方式へ改稿した。あわせて第6〜7章と第8章の保存処理は、関数名・型・引数・手順の説明だけを示す形式へ変更した。改稿後の内容は、どの環境でもビルド・実行していない。上記の2026年10月20日の検証記録は、改稿前のニューラルネットワーク版に対するものである。

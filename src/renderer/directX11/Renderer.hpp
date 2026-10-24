@@ -36,7 +36,8 @@ namespace sil::renderer {
         Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain_;
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView_;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView_;
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> depthTexture_;
+
+             Microsoft::WRL::ComPtr<ID3D11Texture2D> depthTexture_;
         D3D11_VIEWPORT viewport_{};
         uint32_t width_;
         uint32_t height_;
