@@ -34,6 +34,21 @@ if(WIN32)
         src/app/WindowsMain.cpp
         src/renderer/directX11/Renderer.cpp
         src/renderer/directX11/Renderer.hpp)
+
+    #GUIŠÖ˜A
+    add_library(sil_imgui STATIC
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_tables.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/backends/imgui_impl_win32.cpp
+    external/imgui/backends/imgui_impl_dx11.cpp)
+    target_include_directories(sil_imgui PUBLIC external/imgui)
+    target_compile_definitions(sil_imgui PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+    target_link_libraries(sil_imgui PRIVATE d3d11 dxgi d3dcompiler dwmapi user32 gdi32 imm32)
+    target_link_libraries(sphere_game PRIVATE sil_imgui)
+    target_compile_definitions(sphere_game PRIVATE SIL_WITH_IMGUI=1)
+
     target_include_directories(sphere_game PRIVATE src)
     target_compile_definitions(sphere_game PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
     target_link_libraries(sphere_game PRIVATE sphere_core DirectXTK user32 d3d11 dxgi)

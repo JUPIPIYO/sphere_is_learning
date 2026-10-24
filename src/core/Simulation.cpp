@@ -181,10 +181,9 @@ namespace sil {
 
         bool hit = false;
         bool goaled = false;
-        // 教材用の低速ステージでは、1/60秒をさらに4回に分けて接触を確認する。
+
         //constexpr int parts = 4;
         const float move = stage_.player.speed * dt; //移動量
-
 
         Vec2 next = state_.player.pos;
         next.x += d.x * move;
@@ -224,7 +223,7 @@ namespace sil {
         }
         */
 
-        ++state_.currentStep;
+        state_.currentStep++;
         if (goaled) state_.gameState = GameState::Success;
         else if (hit) state_.gameState = GameState::Collision;
         else if (state_.currentStep >= stage_.maxSteps) state_.gameState = GameState::Timeout;

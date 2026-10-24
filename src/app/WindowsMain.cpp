@@ -8,6 +8,12 @@
 
 #include "core/Simulation.hpp"
 #include "renderer/directX11/Renderer.hpp"
+
+//ImGui関連
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
+#include <backends/imgui_impl_dx11.h>
+
 using namespace sil;
 using namespace std;
 namespace
@@ -22,65 +28,149 @@ namespace
 		bool minimized = false;
 		bool hasFocus = true;
 		bool resetClock = false;
+        bool imguiReady = false;
 	};
 
 
-// Rendererより後までウィンドウを生かし例外時にも閉じる
-struct WindowLifetime {
-	HWND window;
-	~WindowLifetime() 
-	{
-		if (IsWindow(window)) {
-			DestroyWindow(window);
-		}
-	}
-};
+    // Rendererより後までウィンドウを生かし例外時にも閉じる
+    struct WindowLifetime 
+    {
+	    HWND window;
+	    ~WindowLifetime() 
+	    {
+		    if (IsWindow(window)) {
+			    DestroyWindow(window);
+		    }
+	    }
+    };
 
-Direc readDirec()
-{
-	//TODO : WASDを読む形に実装
-	return Direc::Stop;
-}
+    Direc readDirec()
+    {
+	    //WASDの入力内容を下にDirecを作成
+        int w = 0x57;
+        int a = 0x41;
+        int s = 0x53;
+        int d = 0x44;
+    
+        int x = 0; int z = 0;
 
-void advanceGame(Environment&, Direc, GameState&, uint32_t)
-{
+        if (GetAsyncKeyState(d) && 0x8000 != 0) x += 1;
+        if (GetAsyncKeyState(a) && 0x8000 != 0) x -= 1;
 
-}
+        if (GetAsyncKeyState(w) && 0x8000 != 0) z += 1;
+        if (GetAsyncKeyState(s) && 0x8000 != 0) z -= 1;
 
-LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    auto* state = reinterpret_cast<WindowState*>(GetWindowLongPtrW(window, GWLP_USERDATA));
-    switch (message) {
-    case WM_NCCREATE: {
-        const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
-        SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create->lpCreateParams));
-        return TRUE;
+        auto direc = direcFromAxes(x, z);
+        return direc;
     }
-    case WM_SIZE:
-        if (state) {
-            state->width = LOWORD(lParam);
-            state->height = HIWORD(lParam);
-            state->minimized = wParam == SIZE_MINIMIZED;
-            state->resizePending = !state->minimized;
-            state->resetClock = true;
+
+    void advanceGame(Environment& env, Direc nextDirec, GameState& lastState, uint32_t initialSeed, float& lastReward)
+    {
+        auto result = env.step(nextDirec);
+
+        if (result.end != GameState::Running)
+        {
+            lastState = result.end;
+            lastReward = result.reward;
+
+            env.reset(initialSeed);
         }
-        return 0;
-    case WM_ACTIVATEAPP:
-        if (state) {
-            state->hasFocus = wParam != FALSE;
-            state->resetClock = true;
-        }
-        return 0;
-    case WM_CLOSE:
-        DestroyWindow(window);
-        return 0;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
     }
-    return DefWindowProcW(window, message, wParam, lParam);
+
+    LRESULT CALLBACK windowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        auto* state = reinterpret_cast<WindowState*>(GetWindowLongPtrW(window, GWLP_USERDATA));
+
+        const LRESULT guiHandled = state && state->imguiReady
+            ? ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam) : 0;
+
+        switch (message) {
+        case WM_NCCREATE: {
+            const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+            SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create->lpCreateParams));
+            return TRUE;
+        }
+        case WM_SIZE:
+            if (state) {
+                state->width = LOWORD(lParam);
+                state->height = HIWORD(lParam);
+                state->minimized = wParam == SIZE_MINIMIZED;
+                state->resizePending = !state->minimized;
+                state->resetClock = true;
+            }
+            return 0;
+        case WM_ACTIVATEAPP:
+            if (state) {
+                state->hasFocus = wParam != FALSE;
+                state->resetClock = true;
+            }
+            return 0;
+        case WM_CLOSE:
+            DestroyWindow(window);
+            return 0;
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+        };
+
+        if (guiHandled) return guiHandled;
+
+        return DefWindowProcW(window, message, wParam, lParam);
+    }
+
+    class ImGuiSession {
+    public:
+        ImGuiSession(HWND window, sil::renderer::Renderer& renderer, WindowState& state)
+            : state_(state)
+        {
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+            try {
+                ImGui::StyleColorsDark();
+
+                //各種Instantiate
+                if (!ImGui_ImplWin32_Init(window)) {
+                    throw std::runtime_error("ImGui Win32 initialization failed");
+                }
+                win32Ready_ = true;
+
+                if (!ImGui_ImplDX11_Init(renderer.device(), renderer.context())) {
+                    throw std::runtime_error("ImGui DX11 initialization failed");
+                }
+                dx11Ready_ = true;
+
+                state_.imguiReady = true;
+            }
+            catch (...) {
+                shutdown();
+                throw;
+            }
+        }
+        ~ImGuiSession() { shutdown(); }
+        ImGuiSession(const ImGuiSession&) = delete;
+        ImGuiSession& operator=(const ImGuiSession&) = delete;
+
+    private:
+        void shutdown() {
+            state_.imguiReady = false;
+            if (dx11Ready_) {
+                ImGui_ImplDX11_Shutdown();
+            }
+            if (win32Ready_) {
+                ImGui_ImplWin32_Shutdown();
+            }
+            ImGui::DestroyContext();
+        }
+        WindowState& state_;
+        bool win32Ready_ = false;
+        bool dx11Ready_ = false;
+    };
+
+
 }
-}
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 {
@@ -122,12 +212,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         //Rendererを作成
         renderer::Renderer renderer(window, windowState.width, windowState.height);
 
+        //imGuiを作成
+        ImGuiSession imGui(window, renderer, windowState);
+
         constexpr uint32_t initialSeed = 42;
 
         Environment env{ makeStage() };
         env.reset(initialSeed);
 
         GameState lastEnd = GameState::Running;
+        float lastReward = 0;
         typedef chrono::steady_clock Clock;
         //using Clock = chrono::steady_clock;
 
@@ -135,6 +229,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         double accumulator = 0.0;
         bool running = true;
         ShowWindow(window, showCommand);
+
+        //ステージ選択部分を表示するための変数
+        int selectedStage = 0;
+        bool mainPlaying = false;
 
         while (running) {
             MSG message{};
@@ -153,7 +251,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 break;
             }
 
-            // 5-Iに進んだら、この位置へ保留中のサイズ変更処理を追加する。
+            // サイズ変更処理
+            if (windowState.resizePending && !windowState.minimized) {
+                renderer.resize(windowState.width, windowState.height);
+                windowState.resizePending = false;
+            }
+
+            //windowStateでここはなにをやっているんだろう
             const auto now = Clock::now();
             if (windowState.resetClock || windowState.minimized || !windowState.hasFocus) 
             {
@@ -168,17 +272,53 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
             const double elapsed = min(std::chrono::duration<double>(now - previousTime).count(), 0.25);
             previousTime = now;
 
-            // GUIを追加するときは、この位置でNewFrameとUI作成を行う。
-            accumulator += elapsed;
-            while (accumulator >= Environment::dt) 
-            {
-                //ゲームが実際に進む
-                advanceGame(env, readDirec(), lastEnd, initialSeed);
-                accumulator -= Environment::dt;
+            // GUIの追加
+            ImGui_ImplDX11_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+
+            if (ImGui::Begin("Stage selection")) {
+                //ステージの選択ボタンを表示
+                ImGui::RadioButton("Stage 1", &selectedStage, 0);
+
+                if  (ImGui::Button("Start"))
+                {
+                    mainPlaying = true;
+                }
+                
+                //残り時間と前回の結果を表示
+                int remainSec = (env.stage().maxSteps - env.state().currentStep) * env.dt;
+                ImGui::Text("Remaining %.1f second", remainSec, 0);
+                ImGui::Text("Last Result : %s", StateToStr(lastEnd).c_str());
+                ImGui::Text("Last Reward : %.1f", lastReward, 0);
             }
 
+            ImGui::End();
+
+            if (mainPlaying) 
+            {
+                const auto direc = ImGui::GetIO().WantCaptureKeyboard
+                    ? sil::Direc::Stop : readDirec();
+                accumulator += elapsed;
+
+                while (accumulator >= sil::Environment::dt) 
+                {
+                    advanceGame(env, direc, lastEnd, initialSeed, lastReward);
+                    accumulator -= sil::Environment::dt;
+                }
+            }
+            else 
+            {
+                accumulator = 0.0;
+            }
+
+            //描画
             renderer.render(env.stage(), env.state());
-            // GUIを追加するときは、この位置でGUIを描画する。
+
+            // GUI描画
+            ImGui::Render();
+            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
             renderer.present();
         }
     }

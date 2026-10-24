@@ -21,7 +21,7 @@ namespace {
 		{
 			ostringstream message;
 			//失敗メッセージの組み立て
-			message << "hex" << result << "in operation:" << operation;
+			message << "std::hex" << result << "in operation:" << operation;
 			throw runtime_error(message.str());
 		}
 		else return;
@@ -105,8 +105,8 @@ namespace sil::renderer {
 		//左上を(0, 0)、幅と高さを引数の値、深度範囲を[0, 1]に
 		viewport_.TopLeftX = 0;
 		viewport_.TopLeftY = 0;
-		viewport_.Width = width;
-		viewport_.Height = height;
+		viewport_.Width = static_cast<float>(width);
+		viewport_.Height = static_cast<float>(height);
 		viewport_.MinDepth = 0;
 		viewport_.MaxDepth = 1;
 
@@ -189,25 +189,25 @@ namespace sil::renderer {
 		プレイヤー	state.player.pos、stage.player.radius	球の直径を半径の2倍にし、中心Yを半径にする
 		*/
 
-		sil::Rect rect(sil::Vec2{ 0, 0 }, sil::Vec2{ 1, 1 });
 		//床
-		drawRect(*cube_, stage.bounds, -0.2, 0.4, XMVectorSet(0.0f, 0.0f, 0.5f, 1.0f), view, projection);
+		float boundHeight = 0.1f;
+		drawRect(*cube_, stage.bounds, boundHeight / 2, boundHeight, XMVectorSet(0.0f, 0.0f, 0.5f, 1.0f), view, projection);
 		//ゴール
-		drawRect(*cube_, stage.goal, 0.02, 0.01, XMVectorSet(0.0f, 0.8f, 0.0f, 1.0f), view, projection);
+		drawRect(*cube_, stage.goal, 0.02f, 0.01f, XMVectorSet(0.0f, 0.8f, 0.0f, 1.0f), view, projection);
 		//壁
 		for (int i = 0; i < stage.walls.size(); i++)
 		{
 			auto wall = stage.walls[i];
-			drawRect(*cube_, wall, 3, 1.5, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
+			drawRect(*cube_, wall, 1.5f, 3.0f, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
 		}
 		//障害物
-		for (int i = 0; i < stage.obstacles.size(); i++)
+		for (int i = 0; i < state.obstacles.size(); i++)
 		{
-			auto obs = stage.obstacles[i];
-			drawRect(*cube_, obs.box, 3, 1.5, XMVectorSet(0.1f, 0.4f, 0.1f, 1.0f), view, projection);
+			auto obs = state.obstacles[i];
+			drawRect(*cube_, obs, 1.5f, 3.0f, XMVectorSet(0.1f, 0.4f, 0.1f, 1.0f), view, projection);
 		}
 		//Player
-		drawSphere(*sphere_, stage.player,  XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
+		drawSphere(*sphere_, state.player,  XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
 
 	}
 
