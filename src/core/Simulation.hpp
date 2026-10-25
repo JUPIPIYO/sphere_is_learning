@@ -76,6 +76,8 @@ namespace sil {
 		StepResult step(Direc action);
 		const Stage& stage() const { return stage_; }
 		const State& state() const { return state_; }
+		const float bestZ() const { return bestZ_; }
+		const float remainSec() const { return static_cast<float>((stage().maxSteps - state().currentStep) * dt); }
 	private:
 		bool blocked(Vec2 position) const;
 		void placeObstacles(double time);

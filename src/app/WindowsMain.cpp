@@ -304,10 +304,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 }
                 
                 //残り時間と前回の結果を表示
-                float remainSec = static_cast<float>((env.stage().maxSteps - env.state().currentStep) * env.dt);
 
                 int j = 0;
-                ImGui::Text("Remaining %.1f second", remainSec);
+                ImGui::Text("Remaining %.1f second", env.remainSec());
                 if (lastResults.size() > 0)
                 {
                     for (int i = lastResults.size() - 1; i >= 0; i--)

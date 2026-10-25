@@ -36,9 +36,10 @@ Claude Code向けの概要。正式な規約は`AGENTS.md`にあり、内容が�
 - 主要ディレクトリ：
   - `src/core/` — シミュレーション（`sil::Environment`、`Stage`、`State`、`Direc`、`GameState`）。**Windows・DirectX・ImGuiのヘッダーを含めない。**
   - `src/renderer/directX11/` — `Renderer`（教科書の`d3d11/`とはパスが異なる）。
+  - `src/ai/` — AI。`common/`（観測・1試行の実行など手法に依存しない部品）、`table/`（行動表と保存形式）、`ga/`（遺伝的アルゴリズム）。将来のA*・MCTSは`search/`に置く。includeは`common`←`table`←`ga`の向きだけ。`src/core`から`ai/`をincludeしない。教科書7.1で`src/ai/Policy`から再構成する。
   - `src/app/` — `WindowsMain.cpp`（ゲーム）、`HeadlessMain.cpp`（描画なし実行）。
   - `tests/` — CTestで実行する自作の軽量テスト。
-- CMakeターゲット：`sphere_core`、`sphere_headless`、`sphere_tests`（全OS）、`sphere_game`（Windowsのみ）。
+- CMakeターゲット：`sphere_core`、`sphere_headless`、`sphere_tests`（全OS）、`sphere_game`（Windowsのみ）。教科書7.1以降は、AIライブラリ`sphere_ai`（`sphere_core`をPUBLICでリンク）とテスト`ai_tests`を追加する。
 
 ## 設計原則（AGENTS.mdの要約）
 

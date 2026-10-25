@@ -23,6 +23,12 @@ if(BUILD_TESTING)
     else()
         message(STATUS "Simulation tests are not implemented yet")
     endif()
+
+    # PolicyTest.cppは現在ai/Policy.cppを直接includeしているため、Policy.cppはどのターゲットにも追加しない。
+    # Policy.hppへ宣言を分けたら、Policy.cppをsphere_coreへ追加し、テストのincludeをPolicy.hppへ変える。
+    add_executable(policy_tests tests/PolicyTest.cpp)
+    target_link_libraries(policy_tests PRIVATE sphere_core)
+    add_test(NAME policy COMMAND policy_tests)
 endif()
 
 if(WIN32)

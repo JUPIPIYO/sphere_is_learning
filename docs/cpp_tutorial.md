@@ -40,7 +40,7 @@ Wキーを押すと球が進む。この短い動作にも、入力を読む処�
 
 ### 最後にそろうファイル
 
-以下は学習を進めた後の配置です。一度に全部作る必要はありません。各章で指定されたファイルだけを追加します。AIの短い関数は読み比べやすいようヘッダーへ`inline`で定義しています。複数の`.cpp`から使っても同じ関数の重複定義にならないための指定です。大きくなった場合は宣言と実装へ分けられます。
+以下は学習を進めた後の配置です。一度に全部作る必要はありません。各章で指定されたファイルだけを追加します。AIのファイルは、第6章では`src/ai/Policy`にまとめて書き、第7章7.1で役割ごとのフォルダ（`common/`、`table/`、`ga/`）へ分け直します。
 
 ```text
 CMakeLists.txt
@@ -48,9 +48,11 @@ src/
   core/Simulation.hpp, Simulation.cpp
   app/HeadlessMain.cpp, WindowsMain.cpp, ExperimentMain.cpp
   renderer/d3d11/Renderer.hpp, Renderer.cpp
-  ai/Policy.hpp, Training.hpp, AgentFile.hpp
+  ai/common/Observation.hpp, Observation.cpp, Episode.hpp
+  ai/table/ActionTable.hpp, ActionTable.cpp, TableFile.hpp, TableFile.cpp
+  ai/ga/GeneticTrainer.hpp, GeneticTrainer.cpp
 tests/
-  SimulationTests.cpp, PolicyTests.cpp
+  SimulationTests.cpp, AiTests.cpp
 ```
 
 ### 教材用の選択と、企画上の要件
@@ -155,16 +157,18 @@ tests/
 | 10/28（水） | 1.5時間 | 6.7：`Metrics`、`evaluate` | 全要素`Stop`の表と全要素`Up`の表で、`end`と`distance`が予想どおりになる |
 | 10/29（木） | 1.5時間 | 6.8：空きマス・障害物の位置・優先順位・フィールド外のテスト | 観測のテストがすべて通る |
 | 10/30（金） | 1.5時間 | 6.8の残り＋予備。第6章で書いた関数を説明できるか見直す | **判断日①**：第6章のテストがすべて通る |
-| 10/31（土） | 4時間 | 7.1〜7.2：`Individual`、`initialPopulation`、`evaluatePopulation`、`nextGeneration` | ヘッドレスの一時コードで、初期集団の評価から2世代先まで動き、最良値を表示できる |
-| 11/1（日） | 4時間 | 7.3の遺伝操作テスト（2時間）。8.2の`stageText`、`modelText`、`saveAgent`に着手（2時間） | 7.3の6項目のテストが通る。保存ファイルが書け、中身を目で確認できる |
+| 10/31（土） | 4時間 | 7.2〜7.3：`Individual`、`initialPopulation`、`evaluatePopulation`、`nextGeneration` | ヘッドレスの一時コードで、初期集団の評価から2世代先まで動き、最良値を表示できる |
+| 11/1（日） | 4時間 | 7.4の遺伝操作テスト（2時間）。8.2の`stageText`、`modelText`、`saveTable`に着手（2時間） | 7.4の6項目のテストが通る。保存ファイルが書け、中身を目で確認できる |
+
+**10/26の進捗による変更。** 10/26の時点で第6章の実装まで終わりました（予定より4日早い）。そこで、10/27〜10/28の平日2日（3時間）を7.1の再構成に使います。10/29〜10/30は7.2を読み、7.3の`initialPopulation`まで前倒しで進めます。上の表の10/27〜10/30の行は、元の計画として残しています。
 
 ### 第2週：保存・CLI・画面再生・学習実験（11/2〜11/8、約18時間）
 
 | 日付 | 時間 | 作業（教材） | その日の完了条件 |
 | --- | --- | --- | --- |
-| 11/2（月） | 1.5時間 | 8.2：`loadAgent` | 保存したファイルを読み戻せる |
+| 11/2（月） | 1.5時間 | 8.2：`loadTable` | 保存したファイルを読み戻せる |
 | 11/3（火・祝） | 4時間 | 8.4の往復・破損テスト。8.3のCLIをコピーしてビルドし、`--generations 0`、`2`、`evaluate`を実行 | **判断日②**：ヘッドレスで学習・保存・評価ができる |
-| 11/4（水） | 1.5時間 | 8.5：`WindowsMain.cpp`で保存済みAIを読み込み、`Controller`で操作する | 保存済みAIがゲーム画面で動く |
+| 11/4（水） | 1.5時間 | 8.5：`WindowsMain.cpp`で保存済みAIを読み込み、`TableAgent`で操作する | 保存済みAIがゲーム画面で動く |
 | 11/5（木） | 1.5時間 | 8.5の残り。終了時の自動再開、ImGuiの開始ボタン、9.2の「保存済みAI」行を確認 | **判断日③**：必須成果の3つの仕組みがそろう |
 | 11/6（金） | 1.5時間 | 学習実験1：`train --generations 20`をCSVへ出力。6.7の任意課題で、訪れた状況の数を表示 | 世代ごとの最良・平均・到達距離の推移を記録できる |
 | 11/7（土） | 4時間 | 学習実験2：改善が小さければ、下の「調整の順番」で1つずつ変えて再実験 | 初期世代より到達距離が伸びる設定の候補が見つかる |
@@ -197,7 +201,7 @@ tests/
 
 | 判断日 | 未達の場合 |
 | --- | --- |
-| ①10/30 | 10/31の前半を第6章に使う。7.3のテストは「シードの再現・エリート保存・値の範囲」の3つに絞る |
+| ①10/30 | 10/31の前半を第6章に使う。7.4のテストは「シードの再現・エリート保存・値の範囲」の3つに絞る |
 | ②11/3 | 11/4〜11/5の画面再生を11/6へずらし、学習実験1を11/7に統合する。保存形式の破損テストは「バージョン違い・要素数違い」の2例に絞る |
 | ③11/5 | 画面再生は「ファイル名を固定して読み込み、自動再開する」だけにし、ImGuiとの統合は後回しにする |
 | ④11/8 | 11/9〜11/10を実験に回し、計測を簡略化する。11/10になっても改善が出なければ、障害物を減らすなどステージを簡単にし、「改善する様子を示す」ことを優先する |
@@ -1750,7 +1754,7 @@ COMの詳細、Win32の呼び出し規約、MRT、flip modelの比較、自作�
 
 ## 第6章 周辺を観測して行動を決める
 
-第6章と第7章は、関数名・型・引数・手順だけを示し、コードは自分で書く章です。宣言だけのコードブロックは、名前と引数をそろえるための見本です。第8章のCLIはここで決めた名前を呼ぶので、名前と引数は表のとおりにしてください。
+第6章と第7章は、関数名・型・引数・手順だけを示し、コードは自分で書く章です。宣言だけのコードブロックは、名前と引数をそろえるための見本です。第7章7.1で、ファイルの置き場所と一部の名前（`Genome`→`ActionTable`、`Controller`→`TableAgent`など）を変更します。第8章のCLIは7.1の後の名前を呼びます。
 
 ### 6.1 この章で作るAIの形
 
@@ -1948,13 +1952,162 @@ endif()
 
 ## 第7章 遺伝的アルゴリズムで行動表を育てる
 
-### 7.1 個体と世代の考え方
+### 7.1 フォルダとファイルを再構成する（課題7-R：自分で書く）
+
+第6章では、観測・行動表・評価を`src/ai/Policy`にまとめて書きました。この後、遺伝的アルゴリズム（第7章）と保存（第8章）を足し、期限後にはA*やモンテカルロ木探索（MCTS）など、Mario AI Competition 2009で使われた手法も試す予定です。全部を`src/ai`の1か所に置き、GA用の表を「Policy（方策一般）」と呼んだままだと、どれがどの手法の部品か分からなくなります。そこで、遺伝操作を書き始める前に、役割ごとにファイルを分け直します。
+
+この節では処理の中身を変えません。名前と置き場所だけを変え、再構成の前後で同じ結果になることを確かめます。このように、動作を変えずに構造だけを整える作業を**リファクタリング**と呼びます。
+
+**始める前に、第6章の状態をコミットしてください。** 再構成で壊れたときに、差分を見て戻せます。
+
+#### 整理の考え方：行動を決めるものと、それを育てるもの
+
+| 第6章で書いたもの | 性質 | ほかの手法でも使うか |
+| --- | --- | --- |
+| `Cell`、`observe`、`toIndex` | 周辺の見え方 | 使う |
+| `Metrics`、1試行のループ | 1試行を実行して成績を測る | 使う。どのAIも同じ表で比べたい |
+| `Genome`、`choose`、`Controller` | 行動表で行動を決める | 行動表方式だけ |
+| 選択・交叉・突然変異（この章で書く） | 行動表を育てる | GAだけ |
+
+A*やMCTSは学習せず、毎回その場で先読みして行動を決めます。一方GAには、「行動を決めるもの（行動表）」と「それを育てるもの（GA）」が別々にあります。この2つを別のフォルダに分けておくと、「行動表を別の方法で育てる」「別の表し方をGAで育てる」といった組み合わせを、片方だけ足して試せます。
+
+#### 新しい構成
+
+```text
+src/ai/
+  common/                    手法に依存しない部品
+    Observation.hpp/.cpp     Cell, Observation, observe, toIndex など
+    Episode.hpp              Metrics, runEpisode
+  table/                     行動表という「方策の表し方」
+    ActionTable.hpp/.cpp     ActionTable, choose, TableAgent, evaluate
+    TableFile.hpp/.cpp       行動表の保存・読込（8.2で作る）
+  ga/                        行動表を「育てる」手法
+    GeneticTrainer.hpp/.cpp  Individual, initialPopulation など（7.3で作る）
+tests/
+  AiTests.cpp                第6章のテストを移したもの。以後のAIのテストもここへ足す
+```
+
+A*用の`search/`や、比較の基準にする単純なAI用の`rule/`などは、必要になったときに作ります。空のフォルダを先に作る必要はありません。
+
+**名前の付け方**
+
+| 接尾辞・名前 | 意味 | 例 |
+| --- | --- | --- |
+| `〜Agent` | 毎更新`Direc`を返し、プレイヤーを操作するもの | `TableAgent`。将来の`AStarAgent`、`MctsAgent` |
+| `〜Trainer` | Agentの中身を学習・進化させるもの | `GeneticTrainer` |
+| `〜File` | 保存形式 | `TableFile` |
+| フォルダ名 | 手法の系統（共通部品・表し方・学習法・探索法） | `common/`、`table/`、`ga/`、`search/` |
+
+**includeしてよい向き**
+
+```text
+core  ←  ai/common  ←  ai/table  ←  ai/ga
+                            ↑           ↑
+                 app（WindowsMain、ExperimentMain）、tests
+```
+
+矢印の元が、矢印の先をincludeできます。`common`は`table`や`ga`を、`table`は`ga`をincludeしません。逆向きのincludeが必要になったら、置き場所が間違っている合図です。`core`は`ai`を一切includeしません。
+
+#### 名前の変更
+
+| 第6章の名前 | 再構成後 | 置き場所 | 理由 |
+| --- | --- | --- | --- |
+| `Cell`、`Observation`、`cellKinds`、`neighborCount`、`cellWidth`、`neighborOffsets`、`stateCount`、`classifyCell`、`observe`、`toIndex` | 変更なし | `common/Observation` | — |
+| `Metrics` | 変更なし | `common/Episode.hpp` | どの手法でも同じ成績表を使う |
+| `evaluate`の中の1試行のループ | `runEpisode` | `common/Episode.hpp` | 行動表以外のAIでも使えるようにする |
+| `Genome` | `ActionTable` | `table/ActionTable` | 「遺伝子」はGAから見た呼び方で、表そのものは育て方と関係ない |
+| `actionCount`、`decisionSteps`、`choose` | 変更なし | `table/ActionTable` | — |
+| `Controller`の`next` | `TableAgent`の`act` | `table/ActionTable` | 将来のほかのAgentと呼び方をそろえる |
+| `evaluate(const Genome&, seed)` | `evaluate(const ActionTable&, seed)` | `table/ActionTable` | 中で`TableAgent`を作り、`runEpisode`を呼ぶだけにする |
+
+自分で別の名前（例：`GenomeController`、`nextDirec`）を使っていた場合も、ここで表の名前にそろえてください。第8章のCLIはこの表の名前を呼びます。GAの中で行動表を指すときは、`Individual`のメンバー名を`genes`とし、GAらしい呼び方を残します。
+
+#### ヘッダーと実装を分ける
+
+`sphere_ai`というライブラリにまとめるため、各ファイルを`.hpp`（宣言）と`.cpp`（実装）に分けます。
+
+| `.hpp`に置くもの | `.cpp`に置くもの |
+| --- | --- |
+| 型（`enum class`、`struct`、`class`の宣言）と`using`の別名 | 関数の本体 |
+| `inline constexpr`の定数 | クラスのメンバー関数の本体（`TableAgent::act`など） |
+| 関数の宣言（例：`Observation observe(const Environment& env);`） | そのファイルの中だけで使う補助関数 |
+| テンプレート（`runEpisode`）の本体 | — |
+
+- `.hpp`の先頭には`#pragma once`を書きます。同じヘッダーを2回includeしても1回分になります。
+- `.cpp`では、対応する`.hpp`を最初にincludeします。そのヘッダーが単独でコンパイルできるかの確認になります。
+- ヘッダーには`using namespace std;`を書かず、`std::array`、`std::uint8_t`、`std::size_t`と書きます。`.cpp`の中なら使っても構いません。
+- `.cpp`に関数の本体を書くときも、`namespace sil { ... }`で囲みます。
+- `.cpp`から`.cpp`をincludeしません。テストも`.hpp`をincludeし、実装はライブラリのリンクで使います。
+
+#### `runEpisode`をテンプレートにする
+
+```cpp
+// ai/common/Episode.hpp に置く宣言の見本。本体もヘッダーに書く。
+template <class AgentT>
+Metrics runEpisode(AgentT& agent, std::uint32_t environmentSeed);
+```
+
+第6章の`evaluate`の手順のうち、`Controller`を作る部分以外をそのまま移します。`agent`には「`reset()`と`act(const Environment&)`を持つもの」なら何でも渡せます。
+
+- **テンプレートとは**：型を引数にした関数の型紙です。`runEpisode(tableAgent, 42)`と呼ぶと、コンパイラーが`AgentT`を`TableAgent`として本体を生成します。生成するにはコンパイラーが本体を見る必要があるため、`.cpp`ではなくヘッダーに書きます。
+- **仮想関数（`virtual`）にしない理由**：今のAgentは`TableAgent`の1種類だけです。共通の基底クラスを先に作るより、2つ目のAgent（A*など）を作って共通部分が見えてから決めるほうが、設計を外しません。テンプレートなら、基底クラスがなくても、後から来るAgentをそのまま受け取れます。
+- `common/Episode.hpp`は`core/Simulation.hpp`だけをincludeし、`table/`のヘッダーはincludeしません。
+
+`table/ActionTable`の`evaluate(const ActionTable& table, std::uint32_t environmentSeed)`は、`TableAgent`を作って`runEpisode`に渡し、結果を返すだけの関数になります。
+
+#### CMakeを分ける（コピー可）
+
+AIを`sphere_core`から分け、`sphere_ai`ライブラリにします。コアを純粋なシミュレーションのまま保ち、AIを使う実行ファイルだけが`sphere_ai`をリンクする形です。第6章で追加したテスト用のブロック（`policy_tests`など）を削除し、`sphere_core`の設定の後に次を追加します。
+
+```cmake
+add_library(sphere_ai
+    src/ai/common/Observation.cpp
+    src/ai/table/ActionTable.cpp)
+target_link_libraries(sphere_ai PUBLIC sphere_core)
+if(MSVC)
+    target_compile_options(sphere_ai PRIVATE /W4 /permissive- /utf-8)
+else()
+    target_compile_options(sphere_ai PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+```
+
+テストは`if(BUILD_TESTING)`の中へ追加します。
+
+```cmake
+    add_executable(ai_tests tests/AiTests.cpp)
+    target_link_libraries(ai_tests PRIVATE sphere_ai)
+    add_test(NAME ai COMMAND ai_tests)
+```
+
+- `sphere_ai`は`sphere_core`を`PUBLIC`でリンクしています。そのため、`sphere_ai`をリンクした側も、`src/`のインクルードパスと`sphere_core`をそのまま使えます。
+- `GeneticTrainer.cpp`は7.3で、`TableFile.cpp`は8.2で、ファイルを作った時点で`add_library(sphere_ai ...)`の一覧へ追加します。存在しないファイルを先に書くと、CMakeの構成が失敗します。
+- 1つのソースファイルは、1つのターゲットにだけ入れます。Visual Studioの「CMakeターゲットに追加」は、選んだすべてのターゲットにファイルを足すことがあります。追加した後は`CMakeLists.txt`の差分を確認してください。
+- `scripts/build.ps1`の既定のビルド対象に`ai_tests`は含まれません。`.\scripts\build.ps1 -Target sphere_tests,ai_tests -RunTests`のように指定します。
+
+**文字コード**：新しく作るファイルはUTF-8で保存してください。`sphere_ai`は`/utf-8`でコンパイルするため、Shift-JISのコメントが残っていると警告C4828が出ます。Visual Studioでは「ファイル→名前を付けて保存」の保存ボタン横の▼から「エンコード付きで保存」を選び、「Unicode (UTF-8 シグネチャ付き)」にします。
+
+#### 手順
+
+1. 第6章の状態をコミットする。
+2. 再構成の前に、全要素`Up`の行動表とシード42で`evaluate`を呼び、`fitness`、`distance`、`survival`、`end`を表示して記録しておく。
+3. フォルダを作り、上の表に従ってファイルを分け、名前を変える。Visual Studioの「名前の変更」（Ctrl+R、Ctrl+R）を使うと、参照している箇所もまとめて変わる。
+4. 第6章のテストを`tests/AiTests.cpp`へ移し、includeを新しいヘッダーに直す。
+5. CMakeを直し、`sphere_ai`と`ai_tests`をビルドする。
+6. 第6章のテストがすべて通ることと、手順2の値が変わっていないことを確かめる。
+7. 古い`src/ai/Policy`と古いテストファイルを削除し、もう一度ビルドする。古いファイルを参照している箇所があれば、ここでエラーになる。
+8. `src/core/`の中に`ai/`をincludeしている箇所がないことを検索で確かめて、コミットする。
+
+**完了条件：** `sphere_ai`と`ai_tests`がビルドでき、第6章のテストが通る。再構成の前後で`evaluate`の結果が一致する。`src/ai/`の直下にファイルがなく、`common/`と`table/`に分かれている。
+
+**考えてみる。** A*で「この行動を取ったら数手後にどうなるか」を試すには、`Environment`を複製して先へ進めます。今の`Environment`は`Stage`と`State`などの値だけを持つので、コピーで複製できます。シミュレーションと描画を分けた設計が、ここでも効いてきます（A*自体は期限後の課題です）。
+
+### 7.2 個体と世代の考え方
 
 | 遺伝的アルゴリズムの用語 | 本作での意味 |
 | --- | --- |
 | 遺伝子座 | 行動表の1要素（ある観測番号に対応する場所） |
 | 対立遺伝子 | その要素の値（9行動のどれか） |
-| 個体 | 行動表1つ（`Genome`、65,536要素） |
+| 個体 | 行動表1つ（`ActionTable`、65,536要素） |
 | 適応度 | 1試行の累積報酬（`Metrics::fitness`） |
 | 世代 | 全個体を評価し、次の集団を作る1周 |
 
@@ -1974,13 +2127,13 @@ endif()
 
 確率0.01でも、65,536要素なら1個体あたり約655要素が変わります。ただし1回の試行で訪れる観測はごく一部なので、訪れない要素が変わっても成績には影響しません。6.7の任意課題で訪れた種類数を数え、変化が多すぎる・少なすぎると感じたら確率を調整します。
 
-### 7.2 必要な関数（課題7-A〜7-C：自分で書く）
+### 7.3 必要な関数（課題7-A〜7-C：自分で書く）
 
-`src/ai/Training.hpp`を作り、`ai/Policy.hpp`、`<algorithm>`、`<random>`、`<stdexcept>`、`<vector>`をincludeします。
+`src/ai/ga/GeneticTrainer.hpp`と`GeneticTrainer.cpp`を作ります。ヘッダーでは`ai/table/ActionTable.hpp`、`<random>`、`<vector>`を、`.cpp`では`<algorithm>`と`<stdexcept>`もincludeします。ヘッダーに宣言、`.cpp`に本体を書き、`GeneticTrainer.cpp`を`CMakeLists.txt`の`add_library(sphere_ai ...)`へ追加してください。
 
 ```cpp
 // 宣言の見本。本体は自分で書く。
-struct Individual { Genome genes{}; Metrics metrics{}; };
+struct Individual { ActionTable genes{}; Metrics metrics{}; };
 
 std::vector<Individual> initialPopulation(std::mt19937& random, int count = 64);
 void evaluatePopulation(std::vector<Individual>& population, std::uint32_t seed);
@@ -2023,16 +2176,16 @@ std::vector<Individual> nextGeneration(const std::vector<Individual>& population
 | `std::bernoulli_distribution(mutationRate)` | その要素を突然変異させるか |
 | 7-Aと同じ行動の分布 | 置き換える行動 |
 
-- トーナメントは小さなラムダにまとめ、選んだ個体の`const Genome&`を返すと64KBのコピーを避けられます。
+- トーナメントは小さなラムダにまとめ、選んだ個体の`const ActionTable&`を返すと64KBのコピーを避けられます。
 - `mutationRate`を引数にしたのは、テストで0や1を指定するためです。CLIからは既定値の0.01で呼ばれます。
 
 **乱数を使う順番も結果の一部です。** 分布を呼ぶ順番を変えると、同じシードでも別の集団になります。決定性のテストが通った後で順番を変えたら、以前の学習結果とは同じ条件で比べられません。
 
 同じ環境シードを全個体に渡しますが、この教材のステージ自体には乱数がありません。決定的な方策を同じ条件で繰り返しても、多様な条件での強さを測ったことにはなりません。学習用シードを変えた独立実験と、同じ個体の評価回数を増やすことを区別してください。
 
-### 7.3 遺伝操作の確認（課題7-D：自分で書く）
+### 7.4 遺伝操作の確認（課題7-D：自分で書く）
 
-`PolicyTests.cpp`で`Training.hpp`をincludeし、次を確かめます。個体数は8で行います。4個体だと全個体がエリートになり、交叉と突然変異が働きません。
+`AiTests.cpp`で`ai/ga/GeneticTrainer.hpp`をincludeし、次を確かめます。個体数は8で行います。4個体だと全個体がエリートになり、交叉と突然変異が働きません。
 
 | 確認 | 方法 |
 | --- | --- |
@@ -2059,20 +2212,20 @@ std::vector<Individual> nextGeneration(const std::vector<Individual>& population
 
 ### 8.2 保存形式（課題8-A：自分で書く）
 
-`src/ai/AgentFile.hpp`を作り、`ai/Training.hpp`、`<cmath>`、`<fstream>`、`<iomanip>`、`<limits>`、`<sstream>`、`<string>`をincludeします。
+`src/ai/table/TableFile.hpp`と`TableFile.cpp`を作ります。ヘッダーでは`ai/table/ActionTable.hpp`と`<string>`を、`.cpp`では`<cmath>`、`<fstream>`、`<iomanip>`、`<limits>`、`<sstream>`もincludeします。行動表の保存形式なので`table/`に置き、`ga/`には依存させません。`TableFile.cpp`を`add_library(sphere_ai ...)`へ追加してください。
 
 ```cpp
 // 宣言の見本。本体は自分で書く。
 std::string stageText();
 std::string modelText();
-struct SavedAgent {
-    Genome genes{};
+struct SavedTable {
+    ActionTable table{};
     int generation{};
     std::uint32_t environmentSeed{}, trainingSeed{};
     Metrics metrics{};
 };
-void saveAgent(const std::string& path, const SavedAgent& agent);
-SavedAgent loadAgent(const std::string& path);
+void saveTable(const std::string& path, const SavedTable& saved);
+SavedTable loadTable(const std::string& path);
 ```
 
 **ファイルの中身。** 1行ごとに次の内容を書きます。
@@ -2097,7 +2250,7 @@ neighbors8-cell1.5-rowsTopToBottom-skipCenter;kinds-Empty-Wall-Obstacle-Goal;pri
 
 第6章の選択や報酬を変えたら、この文字列も変えます。そうすれば古いファイルの読み込みが失敗し、別の意味の表で黙って動くことを防げます。
 
-**`saveAgent`**
+**`saveTable`**
 
 - `std::ofstream`で開き、失敗したら`std::runtime_error`を投げます。
 - 2つの設定文字列は`std::quoted`で書きます。空白を含む文字列を1項目として読み書きできます。
@@ -2106,24 +2259,26 @@ neighbors8-cell1.5-rowsTopToBottom-skipCenter;kinds-Empty-Wall-Obstacle-Goal;pri
 - **落とし穴**：`std::uint8_t`は多くの環境で`unsigned char`の別名です。`out << gene`と書くと数字ではなく文字コード3や5の制御文字が出力されます。数値として書くなら`static_cast<int>(gene)`、1文字として書くなら上の変換を使います。
 - 最後に`close()`し、ストリームの状態を確認して、書き込み失敗も例外にします。
 
-**`loadAgent`**（不正なファイルは必ず例外にする）
+**`loadTable`**（不正なファイルは必ず例外にする）
 
 - 先頭が`SIL_AGENT_V1`、ステージ文字列が`stageText()`、モデル文字列が`modelText()`と一致しなければ失敗。
 - 世代番号が負、終了理由の整数が`Success`〜`Timeout`の範囲外、成績が有限でない（`std::isfinite`で調べる）なら失敗。
 - 要素数が`stateCount`と違えば失敗。
-- 行動表の行を`std::string`へ1語として読み、長さが`stateCount`か、全文字が`'0'`〜`'8'`かを確かめます。`c - '0'`で番号へ戻して`genes`へ入れます。
+- 行動表の行を`std::string`へ1語として読み、長さが`stateCount`か、全文字が`'0'`〜`'8'`かを確かめます。`c - '0'`で番号へ戻して`table`へ入れます。
 - 最後に`in >> std::ws`で空白を読み飛ばし、`eof()`でなければ余計なデータがあるとして失敗。
 
 この形式は方策の保存です。集団全体、途中の評価状態、乱数生成器の内部状態は保存していないため、学習途中から同じ乱数列で再開する機能にはなりません。また、保存は指定先を上書きします。実験ごとに別の出力先を使ってください。途中書き込みによる破損への対策は、一時ファイルへ書いて成功後に置換する方法を追加課題とします。
 
 ### 8.3 コマンドラインから実験する
 
-以下は教材用CLIの完全例です（コピー可）。第6〜8章の関数を、本文の名前と引数で用意していれば、そのまま呼び出せます。新しい依存関係を増やさず、`std::from_chars`で整数を読みます。文字列の一部だけが数値だった場合も、入力末尾まで消費したかを調べて拒否します。
+以下は教材用CLIの完全例です（コピー可）。第6〜8章の関数を、7.1の後の名前と引数で用意していれば、そのまま呼び出せます。新しい依存関係を増やさず、`std::from_chars`で整数を読みます。文字列の一部だけが数値だった場合も、入力末尾まで消費したかを調べて拒否します。
 
 **完全例：`src/app/ExperimentMain.cpp`**
 
 ```cpp
-#include "ai/AgentFile.hpp"
+#include "ai/ga/GeneticTrainer.hpp"
+#include "ai/table/TableFile.hpp"
+#include <algorithm>
 #include <charconv>
 #include <iostream>
 #include <string_view>
@@ -2194,17 +2349,17 @@ void train(const Options& o) {
             << ',' << m.survival << ',' << m.lateral << ',' << static_cast<int>(m.end) << '\n';
         if (generation == 0 || generation == o.generations / 2 || generation == o.generations) {
             const std::string prefix = o.output + "_g" + std::to_string(generation);
-            sil::saveAgent(prefix + "_fitness.sil", {best.genes, generation, o.seed, o.trainingSeed, best.metrics});
-            sil::saveAgent(prefix + "_distance.sil", {farthest->genes, generation, o.seed, o.trainingSeed, farthest->metrics});
+            sil::saveTable(prefix + "_fitness.sil", {best.genes, generation, o.seed, o.trainingSeed, best.metrics});
+            sil::saveTable(prefix + "_distance.sil", {farthest->genes, generation, o.seed, o.trainingSeed, farthest->metrics});
         }
         if (generation != o.generations) population = sil::nextGeneration(population, random);
     }
 }
 void evaluate(const Options& o) {
-    const auto agent = sil::loadAgent(o.input);
+    const auto saved = sil::loadTable(o.input);
     std::cout << "trial,fitness,distance,survival,lateral,end\n";
     for (int trial = 0; trial < o.evaluations; ++trial) {
-        const auto m = sil::evaluate(agent.genes, o.seed);
+        const auto m = sil::evaluate(saved.table, o.seed);
         std::cout << trial << ',' << m.fitness << ',' << m.distance << ',' << m.survival << ',' << m.lateral
             << ',' << static_cast<int>(m.end) << '\n';
     }
@@ -2229,7 +2384,7 @@ int main(int argc, char** argv) {
 
 ```cmake
 add_executable(sphere_experiment src/app/ExperimentMain.cpp)
-target_link_libraries(sphere_experiment PRIVATE sphere_core)
+target_link_libraries(sphere_experiment PRIVATE sphere_ai)
 ```
 
 まず世代更新を行わず、初期集団だけを評価して保存します。次に2世代で一連の処理を確認し、問題がなければ世代数を増やします。
@@ -2253,16 +2408,16 @@ CSVの`best_distance`は世代内で到達距離が最大の個体の値です�
 
 ### 8.4 保存の往復を確かめる
 
-**確認用の差し込み例：PolicyTests.cppで`AgentFile.hpp`をincludeし、`try`内へ追加。**
+**確認用の差し込み例：AiTests.cppで`ai/table/TableFile.hpp`をincludeし、`try`内へ追加。**
 
 ```cpp
-sil::SavedAgent original;
-original.genes[7] = 5;
-original.genes[sil::stateCount - 1] = 8;
+sil::SavedTable original;
+original.table[7] = 5;
+original.table[sil::stateCount - 1] = 8;
 original.metrics.end = sil::GameState::Timeout;
-sil::saveAgent("roundtrip.sil", original);
-const auto restored = sil::loadAgent("roundtrip.sil");
-check(restored.genes == original.genes, "action table survives text roundtrip");
+sil::saveTable("roundtrip.sil", original);
+const auto restored = sil::loadTable("roundtrip.sil");
+check(restored.table == original.table, "action table survives text roundtrip");
 ```
 
 破損検査は、保存ファイルをコピーし、先頭のバージョン、要素数、行動表の文字（`9`や英字に変える、末尾を削って短くする）を変更して、読み込みが失敗するか確かめます。学習用の元ファイルは残してください。
@@ -2273,28 +2428,28 @@ check(restored.genes == original.genes, "action table survives text roundtrip");
 
 ```cpp
 // WindowsMain.cppのincludeへ追加。
-#include "ai/AgentFile.hpp"
+#include "ai/table/TableFile.hpp"
 
 // envを構築した後。パスは実行時の作業フォルダーからの相対位置。
-const auto saved = sil::loadAgent("run123_g20_distance.sil");
+const auto saved = sil::loadTable("run123_g20_distance.sil");
 env.reset(saved.environmentSeed);
-sil::Controller controller(saved.genes);
-controller.reset();
+sil::TableAgent agent(saved.table);
+agent.reset();
 ```
 
 ```cpp
 // 固定時間刻みの更新内で、人間の入力から行動を作る部分を置換。
-const auto result = env.step(controller.next(env));
+const auto result = env.step(agent.act(env));
 if (result.end != sil::GameState::Running) {
     // ここで終了結果を画面表示用の変数へ記録する。
     env.reset(saved.environmentSeed);
-    controller.reset();
+    agent.reset();
 }
 ```
 
-`Controller`は`saved.genes`を参照するだけなので、`saved`はControllerを使い終わるまで破棄されない場所に置きます。上の例のように、メッセージループより前の同じスコープで宣言すれば問題ありません。
+`TableAgent`は`saved.table`を参照するだけなので、`saved`はAgentを使い終わるまで破棄されない場所に置きます。上の例のように、メッセージループより前の同じスコープで宣言すれば問題ありません。
 
-第5章のもとの`env.step()`とリセット処理は残して二重に呼ばず、この処理へ置換してください。ImGui版では`if (playing)`の内側を置換し、開始ボタンで環境をリセットする際にも`saved.environmentSeed`を使って`controller.reset()`を呼びます。`Controller::next()`の呼び出しも1更新に1回です。モデル選択GUIを追加する場合は、読込失敗を画面に表示し、成功したファイルだけを実行します。教材の最初の到達点はファイル名をコード中で指定する方法です。
+第5章のもとの`env.step()`とリセット処理は残して二重に呼ばず、この処理へ置換してください。ImGui版では`if (playing)`の内側を置換し、開始ボタンで環境をリセットする際にも`saved.environmentSeed`を使って`agent.reset()`を呼びます。`TableAgent::act()`の呼び出しも1更新に1回です。`CMakeLists.txt`では、`sphere_game`のリンク先に`sphere_ai`を追加します。モデル選択GUIを追加する場合は、読込失敗を画面に表示し、成功したファイルだけを実行します。教材の最初の到達点はファイル名をコード中で指定する方法です。
 
 <a id="chapter-9"></a>
 
@@ -2308,7 +2463,7 @@ if (result.end != sil::GameState::Running) {
 
 ```cpp
 const auto begin = std::chrono::steady_clock::now();
-sil::Genome sample{};
+sil::ActionTable sample{};
 const auto metrics = sil::evaluate(sample, 42);
 const auto finish = std::chrono::steady_clock::now();
 const double seconds = std::chrono::duration<double>(finish - begin).count();
@@ -2409,3 +2564,5 @@ WindowsのMSVCビルド、Direct3D 11の表示、DirectXTKとImGuiのリンク�
 第5章は2026年10月22日に、5-Hまでの既習本文を残し、定型部分をコピーし、ゲームによって変わる処理を自分で書く構成へ改稿した。章構成、差し込み先、現在のコアAPI・依存ヘッダーとの対応、コードフェンスを静的に確認した。コピー用の基盤と自力実装の骨組みを含む教材であり、改稿後のWindowsビルド・リンク・画面表示は未検証。上記の2026年10月20日の検証記録は、改稿後の第5章の動作保証を表すものではない。
 
 第6〜8章は2026年10月25日に、ニューラルネットワークの重みを個体とする方式から、周辺8マスの観測番号ごとに行動を定めた行動表を個体とする方式へ改稿した。あわせて第6〜7章と第8章の保存処理は、関数名・型・引数・手順の説明だけを示す形式へ変更した。改稿後の内容は、どの環境でもビルド・実行していない。上記の2026年10月20日の検証記録は、改稿前のニューラルネットワーク版に対するものである。
+
+2026年10月26日に、第7章の冒頭へ7.1「フォルダとファイルを再構成する」を追加し、第7〜9章のファイルパスと名前（`ActionTable`、`TableAgent`、`TableFile`、`GeneticTrainer`、`sphere_ai`、`ai_tests`）を再構成後のものへ変更した。章の構成と名前の対応を静的に確認しただけで、ビルド・実行はしていない。
