@@ -84,6 +84,33 @@ namespace sil {
 			&& abs(a.center.z - b.center.z) <= a.half.z + b.half.z;
 	}
 
+    //更新位置
+    Rect Obstacle::currentPositionBox(double time)
+    {
+        const double length = high - low;
+        double moved_dist = phase + speed * time; //これまで進んだ距離
+        double current_dist = fmod(moved_dist, 2 * length);
+        if (current_dist <= length)
+        {
+            //順路
+            float current = low + current_dist;
+        }
+        else
+        {
+            //往路
+            float current = low + (2 * length - current_dist);
+        }
+        const double u = fmod(phase + speed * time, 2 * length);
+        const float value = low + static_cast<float>(u <= length ? u : 2 * length - u);
+
+        Rect b = box;
+
+        if (axis == Axis::X) b.center.x = value;
+        else b.center.z = value;
+
+        return b;
+    }
+
     Stage makeStage() {
         Stage s;
         s.bounds = { {0, 5}, {5, 6} };
@@ -145,26 +172,7 @@ namespace sil {
         {
             auto& o = stage_.obstacles[i];
 
-            const double length = o.high - o.low;
-            double moved_dist = o.phase + o.speed * time; //これまで進んだ距離
-            double current_dist = fmod(moved_dist, 2 * length);
-            if (current_dist <= length)
-            {
-                //順路
-                float current = o.low + current_dist;
-            }
-            else
-            {
-                //往路
-                float current = o.low + (2 * length - current_dist);
-            }
-            const double u = fmod(o.phase + o.speed * time, 2 * length);
-            const float value = o.low + static_cast<float>(u <= length ? u : 2 * length - u);
-
-            if (o.axis == Axis::X) o.box.center.x = value;
-            else o.box.center.z = value;
-
-            state_.obstacles[i] = o.box;
+            state_.obstacles[i] = o.currentPositionBox(time);
         }
     }
 

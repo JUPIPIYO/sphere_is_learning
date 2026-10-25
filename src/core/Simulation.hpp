@@ -27,6 +27,7 @@ namespace sil {
 		Axis axis{ Axis::X }; //進む向き
 		float low{}, high{}, speed{}, phase{};
 		//補足:phaseは初期位置からどれだけ進んだか(初期位置はlow)
+		Rect currentPositionBox(double time);
 	};
 
 	struct Player {

@@ -10,6 +10,19 @@ else()
     target_compile_options(sphere_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+# AI。sphere_coreを純粋なシミュレーションのまま保つため、別ライブラリにする。
+# 新しい.cppを作ったら、この一覧にだけ追加する。
+add_library(sphere_ai
+    src/ai/common/Observation.cpp
+    src/ai/common/Episode.cpp
+    src/ai/ga/GAAgent.cpp)
+target_link_libraries(sphere_ai PUBLIC sphere_core)
+if(MSVC)
+    target_compile_options(sphere_ai PRIVATE /W4 /permissive- /utf-8)
+else()
+    target_compile_options(sphere_ai PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 add_executable(sphere_headless src/app/HeadlessMain.cpp)
 target_link_libraries(sphere_headless PRIVATE sphere_core)
 
@@ -24,11 +37,13 @@ if(BUILD_TESTING)
         message(STATUS "Simulation tests are not implemented yet")
     endif()
 
-    # PolicyTest.cppは現在ai/Policy.cppを直接includeしているため、Policy.cppはどのターゲットにも追加しない。
-    # Policy.hppへ宣言を分けたら、Policy.cppをsphere_coreへ追加し、テストのincludeをPolicy.hppへ変える。
-    add_executable(policy_tests tests/PolicyTest.cpp)
-    target_link_libraries(policy_tests PRIVATE sphere_core)
-    add_test(NAME policy COMMAND policy_tests)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/AiTests.cpp")
+        add_executable(ai_tests tests/AiTests.cpp)
+        target_link_libraries(ai_tests PRIVATE sphere_ai)
+        add_test(NAME ai COMMAND ai_tests)
+    else()
+        message(STATUS "AI tests are not implemented yet (tests/AiTests.cpp)")
+    endif()
 endif()
 
 if(WIN32)
