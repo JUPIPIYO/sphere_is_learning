@@ -1,17 +1,18 @@
+#pragma once
 #include "core/Simulation.hpp"
 #include "ai/common/Observation.hpp"
 #include "ai/common/Agent.hpp"
 
 namespace sil
 {
-	typedef std::array<uint8_t, stateSize> Genome; //ˆâ“`q F 65535ƒpƒ^[ƒ“‚É‘Î‚·‚édirec•\
+	typedef std::array<uint8_t, stateSize> Genome; //éºä¼å­ ï¼š 65535ãƒ‘ã‚¿ãƒ¼ãƒ³ã«å¯¾ã™ã‚‹direcè¡¨
 
 	class GAAgent : public Agent
 	{
 	public:
 		explicit GAAgent(const Genome& gen);
 		void reset() override;
-		//env‚ğ“Ç‚İo‚µ‚ÄŸ‚Ìs“®‚ğô’è
+		//envã‚’èª­ã¿å‡ºã—ã¦æ¬¡ã®è¡Œå‹•ã‚’ç­–å®š
 		Direc nextDirec(const Environment& env) override ;
 	private:
 		const Genome* genes_;

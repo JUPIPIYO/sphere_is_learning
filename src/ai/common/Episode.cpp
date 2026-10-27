@@ -1,4 +1,4 @@
-#include "ai/common/Episode.hpp"
+﻿#include "ai/common/Episode.hpp"
 #include "ai/common/Agent.hpp"
 #include "core/Simulation.hpp"
 
@@ -11,7 +11,7 @@ namespace sil
 
 	Metrics evaluate(Agent& agent, uint32_t seed)
 	{
-		//�����쐬���A���ۂɂǂ�Ȑ��ʂ𐶂ݏo�����𔻒�
+		//環境を作成し、実際にどんな成果を生み出すかを判定
 		Environment env(makeStage());
 		env.reset(seed);
 
@@ -23,7 +23,9 @@ namespace sil
 			lastResult = env.step(d);
 		}
 
-		//����
-		return Metrics{ calucFitness(lastResult), env.bestZ(), env.surviveSec(), env.state().gameState };
+		float fitness = env.bestZ();
+
+		//結果
+		return Metrics{ fitness, env.bestZ(), env.surviveSec(), env.state().gameState };
 	}
 }

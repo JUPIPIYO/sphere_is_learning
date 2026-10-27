@@ -6,7 +6,7 @@ using namespace std;
 
 namespace sil
 {
-	//rect‚É‚Â‚¢‚Ä‚»‚Ì”ÍˆÍ‚ÌCelló‹µ‚ğŠm”F
+	//rectã«ã¤ã„ã¦ãã®ç¯„å›²ã®CellçŠ¶æ³ã‚’ç¢ºèª
 	Cell classifyCell(const Stage& stage, const State& state, Rect& rect)
 	{
 		for (int i = 0; i < state.obstacles.size(); i++)
@@ -29,17 +29,17 @@ namespace sil
 			}
 		}
 
-		//‚±‚Ì“_‚Å‰½‚à‚È‚¯‚ê‚Îempty
+		//ã“ã®æ™‚ç‚¹ã§ä½•ã‚‚ãªã‘ã‚Œã°empty
 		return Cell::Empty;
 	}
 
-	//PlayerüˆÍ‚Ìî•ñ‚ğÀÛ‚ÉŒ©‚Äobservation‚ğì¬
+	//Playerå‘¨å›²ã®æƒ…å ±ã‚’å®Ÿéš›ã«è¦‹ã¦observationã‚’ä½œæˆ
 	Observation observe(const Environment& env)
 	{
 		Observation obs{};
 		auto p = env.state().player.pos;
 
-		//Player‚ÌüˆÍ8ƒ}ƒX‚ğ‡‚ÉŒ©‚Ä‚¢‚­
+		//Playerã®å‘¨å›²8ãƒã‚¹ã‚’é †ã«è¦‹ã¦ã„ã
 		int idx = 0;
 		for (float x : { 1 * cellWidth, 0.0f, -1 * cellWidth })
 		{
@@ -57,7 +57,7 @@ namespace sil
 		return obs;
 	}
 
-	//Observation‚Ì“à—e‚ğ0 ~ 65535‚Ì’l‚É•ÏŠ·
+	//Observationã®å†…å®¹ã‚’0 ~ 65535ã®å€¤ã«å¤‰æ›
 	size_t toIndex(const Observation& observation)
 	{
 		size_t gene = 0;

@@ -1,4 +1,4 @@
-#include "ai/ga/GAAgent.hpp"
+﻿#include "ai/ga/GAAgent.hpp"
 
 namespace sil
 {
@@ -9,12 +9,12 @@ namespace sil
 
 	void GAAgent::reset()
 	{
-
+		currentStep_ = 0;
 	}
 
 	Direc GAAgent::nextDirec(const Environment& env)
 	{
-		if (currentStep_ % 6 == 0)
+		if (currentStep_ % decisionSteps == 0)
 		{
 			current_ = static_cast<Direc>((*genes_)[toIndex(observe(env))]);
 			;

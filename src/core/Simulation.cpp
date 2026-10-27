@@ -85,10 +85,10 @@ namespace sil {
 	}
 
     //更新位置
-    Rect Obstacle::currentPositionBox(double time)
+    Vec2 ObstacleRect::currentPosition(double time)
     {
         const double length = high - low;
-        double moved_dist = phase + speed * time; //これまで進んだ距離
+        double moved_dist = speed * time; //これまで進んだ距離
         double current_dist = fmod(moved_dist, 2 * length);
         if (current_dist <= length)
         {
@@ -100,7 +100,7 @@ namespace sil {
             //往路
             float current = low + (2 * length - current_dist);
         }
-        const double u = fmod(phase + speed * time, 2 * length);
+        const double u = fmod(speed * time, 2 * length);
         const float value = low + static_cast<float>(u <= length ? u : 2 * length - u);
 
         Rect b = box;
@@ -128,8 +128,8 @@ namespace sil {
             {{0, -1}, {5, 0.1f}}, {{0, 11}, {5, 0.1f}} ,
         };
         s.obstacles = {
-            {{{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f, 0.0f},
-            {{{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f, 0.0f}
+            { {{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f},
+           { {{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f}
         };
         return s;
     }
@@ -172,7 +172,7 @@ namespace sil {
         {
             auto& o = stage_.obstacles[i];
 
-            state_.obstacles[i] = o.currentPositionBox(time);
+            state_.obstacles[i] = o.currentPosition(time);
         }
     }
 

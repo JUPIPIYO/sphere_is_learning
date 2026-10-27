@@ -10,7 +10,7 @@ using namespace std;
 
 int main()
 {
-	//í“ñã‚É“®‚­genes
+	//å¸¸äºŒä¸Šã«å‹•ãgenes
 	Genome g;
 	g.fill(1);
 

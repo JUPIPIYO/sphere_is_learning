@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "core/Simulation.hpp"
 #include <array>
 
@@ -12,25 +12,25 @@ namespace sil
 		Goal = 0x03
 	};
 
-	inline constexpr size_t CellKinds = 4; //�Z���̎��(�Z���ɑ��݂���I�u�W�F�N�g�̎��)�̐�
-	inline constexpr size_t neighborCount = 8; //�אڃ}�X�̐� 3x3 - 1
-	inline constexpr float cellWidth = 1.0f; //�Z���̑傫��
-	inline constexpr int decisionSteps = 4; //�����ύX����t���[�����o
+	inline constexpr size_t CellKinds = 4; //セルの種類(セルに存在するオブジェクトの種類)の数
+	inline constexpr size_t neighborCount = 8; //隣接マスの数 3x3 - 1
+	inline constexpr float cellWidth = 1.0f; //セルの大きさ
+	inline constexpr int decisionSteps = 4; //方策を変更するフレーム感覚
 
-	inline constexpr size_t stateSize = 1 << 16; //���肦��󋵂̑���
+	inline constexpr size_t stateSize = 1 << 16; //ありえる状況の総数
 
-	typedef std::array<Cell, neighborCount> Observation; //���͂̏󋵂��i�[����z��
+	typedef std::array<Cell, neighborCount> Observation; //周囲の状況を格納する配列
 
 
 	inline constexpr size_t actionSize = 9;
 
-	//rect�ɂ��Ă��͈̔͂�Cell�󋵂��m�F
+	//rectについてその範囲のCell状況を確認
 	Cell classifyCell(const Stage& stage, const State& state, Rect& rect);
 
-	//Player���͂̏������ۂɌ���observation���쐬
+	//Player周囲の情報を実際に見てobservationを作成
 	Observation observe(const Environment& env);
 
-	//Observation�̓��e��0 ~ 65535�̒l�ɕϊ�
+	//Observationの内容を0 ~ 65535の値に変換
 	size_t toIndex(const Observation& observation);
 
 }

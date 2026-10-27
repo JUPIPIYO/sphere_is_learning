@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <variant>
 
 namespace sil {
 	//座標
@@ -11,6 +12,21 @@ namespace sil {
 	struct Rect {
 		Vec2 center{}, half{}; 
 	};
+
+
+	struct Box { Vec2 half; };
+	struct Circle { float radius; };
+
+	using Shape = std::variant<Box, Circle>;
+
+	//動き
+	struct Fixed {};
+	struct RoundTrip { float low{}, high{}, speed{}; };
+	struct Orbit { Vec2 center; float radius{}, angularSpeed{}; };
+	struct Chase { float speed; };
+	using Motion = std::variant<Fixed, RoundTrip, Orbit, Chase>;
+
+
 	//方向：左右がX、上下がZ
 	enum class Axis {X, Z};
 
@@ -21,16 +37,23 @@ namespace sil {
 	enum class GameState {Running, Success, Collision, Timeout};
 	std::string StateToStr(GameState s);
 
-	//障害物の直方体オブジェクト
-	struct Obstacle {
-		Rect box; //直方体
-		Axis axis{ Axis::X }; //進む向き
-		float low{}, high{}, speed{}, phase{};
-		//補足:phaseは初期位置からどれだけ進んだか(初期位置はlow)
-		Rect currentPositionBox(double time);
+
+	struct Obstacle
+	{
+		Shape shape; Vec2 pos; Motion motion;
 	};
 
-	struct Player {
+	//障害物の直方体オブジェクト
+	struct ObstacleRect : Obstacle
+	{
+		Rect box;
+		Axis axis{ Axis::X };
+		float low{}, high{}, speed{};
+		Vec2 currentPosition(double time);
+	};
+
+	struct Player 
+	{
 		Vec2 pos;
 		//プレイヤーの設定
 		float radius{ 0.3f };
@@ -45,7 +68,7 @@ namespace sil {
 		int maxSteps{ 1200 };
 		std::vector<Rect> walls;
 		//障害物の初期位置
-		std::vector<Obstacle> obstacles;
+		std::vector<ObstacleRect> obstacles;
 		Rect goal;
 	};
 
@@ -53,7 +76,7 @@ namespace sil {
 	struct State {
 		Player player;
 		//現在の障害物の位置・大きさ
-		std::vector<Rect> obstacles;
+		std::vector<Obstacle> obstacles;
 		int currentStep{};
 		GameState gameState{ GameState::Running };
 	};

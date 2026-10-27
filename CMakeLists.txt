@@ -10,12 +10,14 @@ else()
     target_compile_options(sphere_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# AIBsphere_core‚ğƒˆ‚ÈƒVƒ~ƒ…ƒŒ[ƒVƒ‡ƒ“‚Ì‚Ü‚Ü•Û‚Â‚½‚ßA•Êƒ‰ƒCƒuƒ‰ƒŠ‚É‚·‚éB
-# V‚µ‚¢.cpp‚ğì‚Á‚½‚çA‚±‚Ìˆê——‚É‚¾‚¯’Ç‰Á‚·‚éB
+# AIã€‚sphere_coreã‚’ç´”ç²‹ãªã‚·ãƒŸãƒ¥ãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³ã®ã¾ã¾ä¿ã¤ãŸã‚ã€åˆ¥ãƒ©ã‚¤ãƒ–ãƒ©ãƒªã«ã™ã‚‹ã€‚
+# æ–°ã—ã„.cppã‚’ä½œã£ãŸã‚‰ã€ã“ã®ä¸€è¦§ã«ã ã‘è¿½åŠ ã™ã‚‹ã€‚
 add_library(sphere_ai
     src/ai/common/Observation.cpp
     src/ai/common/Episode.cpp
-    src/ai/ga/GAAgent.cpp)
+    src/ai/ga/GAAgent.cpp 
+    src/ai/ga/GenomeFile.cpp
+    src/ai/ga/GATrainer.cpp)
 target_link_libraries(sphere_ai PUBLIC sphere_core)
 if(MSVC)
     target_compile_options(sphere_ai PRIVATE /W4 /permissive- /utf-8)
@@ -56,7 +58,7 @@ if(WIN32)
         src/renderer/directX11/Renderer.cpp
         src/renderer/directX11/Renderer.hpp)
 
-    #GUIŠÖ˜A
+    #GUIé–¢é€£
     add_library(sil_imgui STATIC
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp
@@ -76,4 +78,8 @@ if(WIN32)
     if(MSVC)
         target_compile_options(sphere_game PRIVATE /W4 /permissive- /utf-8)
     endif()
+
+add_executable(sphere_experiment src/app/AgentMain.cpp)
+target_link_libraries(sphere_experiment PRIVATE sphere_ai)
+
 endif()
