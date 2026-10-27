@@ -1,3 +1,4 @@
+#pragma once
 #include "core/Simulation.hpp"
 #include <array>
 
@@ -11,25 +12,25 @@ namespace sil
 		Goal = 0x03
 	};
 
-	inline constexpr size_t CellKinds = 4; //ƒZƒ‹‚Ìí—Ş(ƒZƒ‹‚É‘¶İ‚·‚éƒIƒuƒWƒFƒNƒg‚Ìí—Ş)‚Ì”
-	inline constexpr size_t neighborCount = 8; //—×Úƒ}ƒX‚Ì” 3x3 - 1
-	inline constexpr float cellWidth = 1.0f; //ƒZƒ‹‚Ì‘å‚«‚³
-	inline constexpr int decisionSteps = 4; //•ûô‚ğ•ÏX‚·‚éƒtƒŒ[ƒ€Š´Šo
+	inline constexpr size_t CellKinds = 4; //ï¿½Zï¿½ï¿½ï¿½Ìï¿½ï¿½(ï¿½Zï¿½ï¿½ï¿½É‘ï¿½ï¿½İ‚ï¿½ï¿½ï¿½Iï¿½uï¿½Wï¿½Fï¿½Nï¿½gï¿½Ìï¿½ï¿½)ï¿½Ìï¿½
+	inline constexpr size_t neighborCount = 8; //ï¿½×Úƒ}ï¿½Xï¿½Ìï¿½ 3x3 - 1
+	inline constexpr float cellWidth = 1.0f; //ï¿½Zï¿½ï¿½ï¿½Ì‘å‚«ï¿½ï¿½
+	inline constexpr int decisionSteps = 4; //ï¿½ï¿½ï¿½ï¿½ï¿½ÏXï¿½ï¿½ï¿½ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½o
 
-	inline constexpr size_t stateSize = 1 << 16; //‚ ‚è‚¦‚éó‹µ‚Ì‘”
+	inline constexpr size_t stateSize = 1 << 16; //ï¿½ï¿½ï¿½è‚¦ï¿½ï¿½ó‹µ‚Ì‘ï¿½ï¿½ï¿½
 
-	typedef std::array<Cell, neighborCount> Observation; //üˆÍ‚Ìó‹µ‚ğŠi”[‚·‚é”z—ñ
+	typedef std::array<Cell, neighborCount> Observation; //ï¿½ï¿½ï¿½Í‚Ìó‹µ‚ï¿½ï¿½iï¿½[ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½
 
 
 	inline constexpr size_t actionSize = 9;
 
-	//rect‚É‚Â‚¢‚Ä‚»‚Ì”ÍˆÍ‚ÌCelló‹µ‚ğŠm”F
+	//rectï¿½É‚Â‚ï¿½ï¿½Ä‚ï¿½ï¿½Ì”ÍˆÍ‚ï¿½Cellï¿½ó‹µ‚ï¿½ï¿½mï¿½F
 	Cell classifyCell(const Stage& stage, const State& state, Rect& rect);
 
-	//PlayerüˆÍ‚Ìî•ñ‚ğÀÛ‚ÉŒ©‚Äobservation‚ğì¬
+	//Playerï¿½ï¿½ï¿½Í‚Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Û‚ÉŒï¿½ï¿½ï¿½observationï¿½ï¿½ï¿½ì¬
 	Observation observe(const Environment& env);
 
-	//Observation‚Ì“à—e‚ğ0 ~ 65535‚Ì’l‚É•ÏŠ·
+	//Observationï¿½Ì“ï¿½ï¿½eï¿½ï¿½0 ~ 65535ï¿½Ì’lï¿½É•ÏŠï¿½
 	size_t toIndex(const Observation& observation);
 
 }

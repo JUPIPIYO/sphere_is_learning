@@ -79,6 +79,7 @@ namespace sil {
 		const State& state() const { return state_; }
 		const float bestZ() const { return bestZ_; }
 		const float remainSec() const { return static_cast<float>((stage().maxSteps - state().currentStep) * dt); }
+		const float surviveSec() const {return static_cast<float>(state().currentStep * dt);}
 	private:
 		bool blocked(Vec2 position) const;
 		void placeObstacles(double time);

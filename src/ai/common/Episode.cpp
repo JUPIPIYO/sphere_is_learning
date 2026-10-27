@@ -11,7 +11,7 @@ namespace sil
 
 	Metrics evaluate(Agent& agent, uint32_t seed)
 	{
-		//ŠÂ‹«‚ğì¬‚µAÀÛ‚É‚Ç‚ñ‚È¬‰Ê‚ğ¶‚İo‚·‚©‚ğ”»’è
+		//ï¿½Â‹ï¿½ï¿½ï¿½ï¿½ì¬ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½Û‚É‚Ç‚ï¿½Èï¿½ï¿½Ê‚ğ¶‚İoï¿½ï¿½ï¿½ï¿½ï¿½ğ”»’ï¿½
 		Environment env(makeStage());
 		env.reset(seed);
 
@@ -23,7 +23,7 @@ namespace sil
 			lastResult = env.step(d);
 		}
 
-		//Œ‹‰Ê
-		return Metrics{ calucFitness(lastResult), env.bestZ(), env.remainSec(), env.state().gameState };
+		//ï¿½ï¿½ï¿½ï¿½
+		return Metrics{ calucFitness(lastResult), env.bestZ(), env.surviveSec(), env.state().gameState };
 	}
 }
