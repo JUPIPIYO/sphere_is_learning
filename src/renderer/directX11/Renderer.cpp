@@ -24,7 +24,7 @@ namespace {
 			message << "std::hex" << result << "in operation:" << operation;
 			throw runtime_error(message.str());
 		}
-		else return;
+		else return; 
 	}
 
 	//GeometricPrimitiveのcubeを実際のRectにしていく
@@ -40,11 +40,11 @@ namespace {
 		cube.Draw(world, view, projection, color);
 	}
 
-	void drawSphere(const DirectX::GeometricPrimitive& sphere, const sil::Player& p,  DirectX::FXMVECTOR color,
+	void drawSphere(const DirectX::GeometricPrimitive& sphere, const sil::Vec2 pos, const float radius,  DirectX::FXMVECTOR color,
 		DirectX::FXMMATRIX view, DirectX::FXMMATRIX projection)
 	{
 		//world上のどこにいるのか、をここで作成
-		FXMMATRIX world = XMMatrixScaling(p.radius, p.radius, p.radius) * XMMatrixTranslation(p.pos.x, p.radius, p.pos.z);
+		FXMMATRIX world = XMMatrixScaling(radius, radius,radius) * XMMatrixTranslation(pos.x, radius, pos.z);
 		sphere.Draw(world, view, projection, color);
 	}
 }
@@ -62,7 +62,7 @@ namespace sil::renderer {
 
 		//各種プリミティブ物体の作成
 		cube_ = GeometricPrimitive::CreateCube(context_.Get(), 1.0f, false);
-		sphere_ = GeometricPrimitive::CreateSphere(context_.Get(), 1.0f, 24, false);
+		sphere_ = GeometricPrimitive::CreateSphere(context_.Get(), 2.0f, 24, false);
 	}
 	
 	void Renderer::createDeviceAndSwapChain(HWND window)
@@ -192,6 +192,10 @@ namespace sil::renderer {
 
 		//床
 		float boundHeight = 0.1f;
+		//壁の高さ
+		float wallHeight = 0.5f;
+		//障害物の高さ(rectの場合)
+		float ObsBoxHeight = 0.5f;
 		drawRect(*cube_, stage.bounds, boundHeight / 2, boundHeight, XMVectorSet(0.0f, 0.0f, 0.5f, 1.0f), view, projection);
 		//ゴール
 		drawRect(*cube_, stage.goal, 0.15f, 0.3f, XMVectorSet(0.2f, 0.8f, 0.2f, 1.0f), view, projection);
@@ -199,16 +203,23 @@ namespace sil::renderer {
 		for (int i = 0; i < stage.walls.size(); i++)
 		{
 			auto wall = stage.walls[i];
-			drawRect(*cube_, wall, 0.25f, 0.5f, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
+			drawRect(*cube_, wall, wallHeight / 2, wallHeight, XMVectorSet(0.2f, 0.4f, 0.0f, 1.0f), view, projection);
 		}
 		//障害物
 		for (int i = 0; i < state.obstacles.size(); i++)
 		{
 			auto obs = state.obstacles[i];
-			drawRect(*cube_, obs, 1.5f, 3.0f, XMVectorSet(0.1f, 0.4f, 0.1f, 1.0f), view, projection);
+			if (auto m = std::get_if<Box>(&obs.shape))
+			{
+				drawRect(*cube_, {obs.pos, m->half}, ObsBoxHeight / 2, ObsBoxHeight, XMVectorSet(0.1f, 0.4f, 0.1f, 1.0f), view, projection);
+			}
+			else if (auto m = std::get_if<Circle>(&obs.shape))
+			{
+				drawSphere(*sphere_, obs.pos,m->radius, XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
+			}
 		}
 		//Player
-		drawSphere(*sphere_, state.player,  XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
+		drawSphere(*sphere_, state.player.pos, state.player.radius,  XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f), view, projection);
 
 	}
 

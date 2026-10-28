@@ -1,4 +1,4 @@
-#include "core/Simulation.hpp"
+﻿#include "core/Simulation.hpp"
 #include "ai/common/Observation.hpp"
 #include <array>
 
@@ -12,7 +12,7 @@ namespace sil
 		for (int i = 0; i < state.obstacles.size(); i++)
 		{
 			auto obs = state.obstacles[i];
-			if (overlaps(obs, rect))
+			if (overlaps(rect, obs))
 			{
 				return Cell::Obstacle;
 			}

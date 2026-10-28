@@ -174,6 +174,8 @@ tests/
 | 11/7（土） | 4時間 | 学習実験2：改善が小さければ、下の「調整の順番」で1つずつ変えて再実験 | 初期世代より到達距離が伸びる設定の候補が見つかる |
 | 11/8（日） | 4時間 | 学習実験3：学習シードを変えて2〜3回実験し、提出用の設定と代表個体（初期・途中・最終）を決める | **判断日④**：改善を示せる保存ファイル一式がそろう |
 
+**10/29の追記。** 11/4〜11/5の「8.5」の作業は、現在の実装名に合わせて書いた8.6「最終世代のAIをウィンドウでデモ再生する」で行います。
+
 **調整の順番（1回に1つだけ変える）。** 変えた項目と結果は、毎回CSVのファイル名とメモに残します。
 
 1. 世代数を増やす（20→50→100）。9.1の計測結果から、実行時間を見積もってから増やす。
@@ -2451,6 +2453,151 @@ if (result.end != sil::GameState::Running) {
 
 第5章のもとの`env.step()`とリセット処理は残して二重に呼ばず、この処理へ置換してください。ImGui版では`if (playing)`の内側を置換し、開始ボタンで環境をリセットする際にも`saved.environmentSeed`を使って`agent.reset()`を呼びます。`TableAgent::act()`の呼び出しも1更新に1回です。`CMakeLists.txt`では、`sphere_game`のリンク先に`sphere_ai`を追加します。モデル選択GUIを追加する場合は、読込失敗を画面に表示し、成功したファイルだけを実行します。教材の最初の到達点はファイル名をコード中で指定する方法です。
 
+### 8.6 最終世代のAIをウィンドウでデモ再生する
+
+8.5は再構成前の名前（`TableAgent`、`loadTable`）で書いた一般的な説明です。この節では、現在のリポジトリの実装（`GAAgent`、`SavedGenome`、`loadGenome`、`sphere_experiment`の保存名`<prefix>_g<世代>_<distance|fitness>.sil`）に合わせて、**学習の最終世代を`sphere_game`のウィンドウで動かすデモモード**を作ります。8.5と内容が重なる部分は、この節を優先してください。
+
+**完成形。** `sphere_game`を起動すると、ImGuiの窓で「Human」と「AI demo」を切り替えられます。AI demoでは`results/`から最終世代の保存ファイルを自動で選んで読み込み、学習時と同じシード・同じ固定時間刻みでAIが球を動かします。1回終わるたびに同じ条件で最初から繰り返します。窓には読み込んだファイル名、世代番号、保存時の成績、現在の到達距離を表示します。
+
+| 実習 | 内容 | 区分 |
+| --- | --- | --- |
+| 1 | `sphere_game`に`sphere_ai`をリンクする | コピー可 |
+| 2 | 最終世代のファイルを探す`findLatestGenome` | 自分で書く |
+| 3 | 読み込みと`GAAgent`の寿命 | 理解して使う |
+| 4 | 固定時間更新の中でAIに行動を決めさせる | 自分で書く |
+| 5 | ImGuiでモード切替と情報表示 | 自分で書く |
+
+#### 実習1：`sphere_game`に`sphere_ai`をリンクする（コピー可）
+
+`CMakeLists.txt`の`sphere_game`のリンク行へ`sphere_ai`を加えます。`sphere_ai`は`sphere_core`を`PUBLIC`でリンクしているので、`sphere_core`を書き残しても二重リンクにはなりません。
+
+```cmake
+target_link_libraries(sphere_game PRIVATE sphere_core sphere_ai DirectXTK user32 d3d11 dxgi)
+```
+
+ビルドが通ることだけ確認してから次へ進みます。`src/ai`の側は変更しません。依存の向きは「`app`→`ai`→`core`」で、`core`や`renderer`から`ai`をincludeしない点はそのままです。
+
+#### 実習2：最終世代のファイルを探す（課題8-B：自分で書く）
+
+`train`は`--output seed42`なら`seed42_g0_*.sil`、`seed42_g25_*.sil`、`seed42_g50_*.sil`のように、世代番号を名前に入れて保存します。「最終世代」はこの番号が最大のファイルです。ファイル名を毎回書き換えなくて済むように、フォルダーから探す関数を`WindowsMain.cpp`の無名名前空間に書きます。
+
+```cpp
+// 宣言の見本。本体は自分で書く。<filesystem>、<charconv>、<optional>、<string_view>をinclude。
+// folder内の「prefix + "_g" + 数字 + "_" + kind + ".sil"」のうち、数字が最大のパスを返す。
+// 1つもなければstd::nulloptを返す。
+std::optional<std::filesystem::path> findLatestGenome(
+    const std::filesystem::path& folder, std::string_view prefix, std::string_view kind);
+```
+
+**手順のヒント（上から順に試す）。**
+
+1. `std::filesystem::exists(folder)`が偽なら`std::nullopt`を返す。
+2. `for (const auto& entry : std::filesystem::directory_iterator(folder))`で1つずつ見る。`entry.is_regular_file()`でないものは飛ばす。
+3. `entry.path().filename().string()`で名前を`std::string`にする。先頭が`prefix + "_g"`、末尾が`"_" + kind + ".sil"`かを`starts_with`と`ends_with`（C++20）で調べる。
+4. 間に残った部分を`std::string_view`の`substr`で切り出し、8.3のCLIと同じ`std::from_chars`で整数にする。**末尾まで読めたか**も確かめる。`seed42_gX_distance.sil`のような名前を世代0と誤読しないためです。
+5. これまでの最大値より大きければ、番号とパスを覚えておく。
+
+**確認方法。** `results/`には現在`seed42_g0`、`g25`、`g50`があります。`findLatestGenome("results", "seed42", "distance")`が`results\seed42_g50_distance.sil`を返すこと、`kind`を`"fitness"`にすると`g50_fitness`になること、存在しない`prefix`で`std::nullopt`になることを、一時的に`OutputDebugStringA`や画面表示で確かめます。
+
+**考えてみる。** 文字列として比べる（`std::max`で名前を比較する）と、`g100`より`g50`が大きいと判定されます。数値に直す理由を説明できるようにしてください。
+
+**`distance`と`fitness`のどちらを再生するか。** 現在の`evaluate`は`fitness = bestZ`なので、2つは同じ値で選ばれます。ただし`fitness`は`population.front()`（並べ替え後の先頭）、`distance`は`max_element`で選んでいるため、同点の個体が複数あると別の個体になる場合があります。デモの既定は「どこまで進めたか」を見せる`distance`にし、報酬を変えたら両方を見比べます。
+
+#### 実習3：読み込みと`GAAgent`の寿命（理解して使う）
+
+`GAAgent`は、コンストラクターで受け取った`Genome`を**ポインターで指しているだけ**で、コピーを持ちません（`GAAgent.hpp`の`const Genome* genes_`）。そのため、遺伝子を持っている`SavedGenome`がAgentより先に破棄されたり、別の場所へ移動されたりすると、Agentは無効なメモリを読みます。
+
+```cpp
+// 間違い：一時オブジェクトの遺伝子を指してしまう。
+GAAgent agent{ loadGenome(path).genes };   // この行の終わりでSavedGenomeは破棄される
+```
+
+これを避けるため、メッセージループより前で次の順に宣言します。`SavedGenome`を先に、`GAAgent`を後に宣言すれば、破棄は逆順なのでAgentが先に消えます。
+
+```cpp
+// 差し込み例：envを作った後、メッセージループより前。
+// 読み込みに失敗してもゲーム全体は止めず、人間の操作は使えるようにする。
+std::optional<SavedGenome> demoGenome;   // 読み込んだ最終世代
+std::optional<GAAgent> demoAgent;        // demoGenome->genesを指す
+std::string demoFile, demoError;
+
+try {
+    if (const auto path = findLatestGenome("results", "seed42", "distance")) {
+        demoGenome = loadGenome(path->string());
+        demoAgent.emplace(demoGenome->genes);
+        demoFile = path->filename().string();
+    } else {
+        demoError = "results/ に seed42_g*_distance.sil がありません";
+    }
+} catch (const std::exception& e) {
+    demoError = e.what();                // modelText()の不一致などはここへ来る
+}
+```
+
+`std::optional`は「値があるかもしれないし、ないかもしれない」を表す型です。`GAAgent`には引数なしのコンストラクターがないので、読み込みに成功した後で`emplace`して作ります。`demoGenome`へ後から別の値を代入し直す機能（モデル選択GUI）を足すときは、Agentを`emplace`し直して指す先を更新します。
+
+`WindowsMain.cpp`はBOM付きUTF-8で、`/utf-8`でコンパイルしているので、上の日本語の文字列リテラルは文字化けしません。ImGuiの既定フォントは日本語の字形を持たないため、画面に出す文字列は英語にするか、日本語フォントを読み込む追加作業が必要です。
+
+**作業フォルダー。** `"results"`は実行時の作業フォルダーからの相対パスです。リポジトリの直下で`.\build\Debug\sphere_game.exe`と起動すれば`results\`が見つかります。Visual Studioのデバッガーから起動する場合は、作業フォルダーがビルドフォルダーになることがあるので、見つからないときは`demoError`の表示と`std::filesystem::current_path()`で確かめてください。
+
+#### 実習4：固定時間更新の中でAIに行動を決めさせる（課題8-C：自分で書く）
+
+ここがこの節の中心です。現在のループは、人間の入力を**1フレームに1回**`readDirec()`で読み、`while (accumulator >= dt)`の中で同じ行動を繰り返し使っています。人間ならそれで問題ありません。しかしAIは学習時、`evaluate`の中で**1ステップごとに**`agent.nextDirec(env)`を呼び、`decisionSteps`（現在4）ステップに1回だけ表を引いていました。
+
+```cpp
+// Episode.cpp（学習時）の更新の形。デモでも同じ順番にする。
+Direc d = agent.nextDirec(env);
+lastResult = env.step(d);
+```
+
+もしデモで`nextDirec`をフレームに1回しか呼ばないと、画面の更新が遅れて1フレームに2ステップ進んだときに、Agentの内部カウンター`currentStep_`と環境のステップ数がずれます。そうなると学習時と違う観測で表を引き、保存時の成績を再現できません。**`nextDirec`は`env.step`の直前に、必ず1回ずつ呼ぶ**のが条件です。
+
+**手順。**
+
+1. 無名名前空間に`enum class PlayMode { Human, AiDemo };`を作り、ループ前に`PlayMode mode = PlayMode::Human;`を置く。
+2. `while (accumulator >= sil::Environment::dt)`の内側で、行動を選ぶ。`mode`が`AiDemo`なら`demoAgent->nextDirec(env)`、`Human`ならループの外で読んだ`direc`を使う。
+3. 1回の試行が終わったら、`env.reset(demoGenome->seed)`と`demoAgent->reset()`を**両方**呼ぶ。現在の`advanceGame`は`env.reset(initialSeed)`しか呼ばないので、Agentもリセットできるように変える。例えば、`advanceGame`が終了したかどうかを`bool`で返すようにして、呼び出し側で`if (mode == PlayMode::AiDemo) demoAgent->reset();`とする方法があります。
+4. リセットに使うシードは`demoGenome->seed`（学習時に保存した環境シード）にする。現在は`initialSeed`と同じ42ですが、`--seed`を変えて学習したファイルを読んだときに条件がずれないようにするためです。
+5. モードを切り替えたときと、Startボタンを押したときにも、`env`とAgentを両方リセットする。途中からAIに渡すと、学習時に存在しなかった状態から始まります。
+6. AI demo中は、`readDirec()`の結果を使わない。キー入力はImGuiの操作だけに使われます。
+
+**考えてみる。** `GAAgent::reset()`は`currentStep_`だけを0に戻し、`current_`は前の試行の値のままです。それでも次の試行の最初の行動が正しく決まるのはなぜか、`nextDirec`の`if`の条件から説明してください。
+
+#### 実習5：ImGuiでモード切替と情報表示（課題8-D：自分で書く）
+
+既存の`"Stage selection"`の窓に、次を追加します。使う関数は第5章で使った`ImGui::RadioButton`、`ImGui::Text`、`ImGui::Button`に加えて、`ImGui::BeginDisabled()`／`ImGui::EndDisabled()`（間の部品を押せなくする）と`ImGui::Separator()`（区切り線）です。
+
+- `Human`と`AI demo`のラジオボタン。`RadioButton`は`int*`を受け取るので、`PlayMode`との変換を自分で書く。押された（戻り値が真の）ときに実習4の手順5のリセットを行う。
+- `demoAgent`がないときは、`AI demo`を`BeginDisabled`で押せなくし、代わりに`demoError`を表示する。
+- AI demo中に表示するもの：ファイル名（`demoFile`）、世代番号（`demoGenome->generation`）、保存時の成績（`metrics.bestZ`、`metrics.surviveSeconds`、`StateToStr(metrics.end)`）、現在の到達距離（`env.bestZ()`）、今回の試行の経過秒数（`env.surviveSec()`）。
+- 結果の履歴（`lastResults`）は人間とAIで混ざるので、モードを切り替えたときに`clear()`するか、行の先頭にモード名を付ける。
+
+**表示する数値の書式。** `ImGui::Text`は`printf`と同じ書式なので、`float`は`%.2f`、`int`は`%d`、文字列は`%s`と`.c_str()`です。`std::string`をそのまま渡すと未定義動作になります。
+
+#### 確認方法と完了条件
+
+| 確認すること | 方法 | 期待する結果 |
+| --- | --- | --- |
+| 最終世代が選ばれる | 起動直後のファイル名表示 | `seed42_g50_distance.sil`（現在の`results/`の場合） |
+| 学習時の成績を再現する | 最初の1回が終わったときの`env.bestZ()`、経過秒数、終了理由を、窓の「保存時の成績」と比べる | 一致する |
+| CLIの評価と一致する | `.\build\Debug\sphere_experiment.exe evaluate --input results\seed42_g50_distance.sil --seed 42` | 上と同じ`bestZ`・秒数・終了理由 |
+| 繰り返しても同じ | 3回連続で試行を見る | 毎回同じ動き・同じ結果 |
+| 画面の都合で結果が変わらない | 試行中にウィンドウサイズ変更、別アプリへ切替して戻る | 結果は変わらない（止まっている間は時間が進まないだけ） |
+| 初期世代との違いが見える | `findLatestGenome`の代わりに一時的に`g0`のパスを渡す | 最終世代より手前で止まる・ぶつかる |
+| 読み込み失敗で落ちない | `results`の名前を一時的に変えて起動 | 人間の操作はでき、AI demoが押せずエラーが表示される |
+| 人間の操作が壊れていない | `Human`に戻してWASDで遊ぶ | 第5章と同じに動く |
+
+**再現しないときに疑う順番。**
+
+1. **`nextDirec`を呼ぶ位置。** 実習4のとおり、`env.step`の直前に1ステップ1回か。
+2. **リセット漏れ。** 試行の終わり・モード切替・Startで、`env`とAgentを両方リセットしているか。シードは`demoGenome->seed`か。
+3. **学習後にステージを変えていないか。** 現在の保存形式（`SIL_GENOME_V1`）は`modelText()`だけを照合し、ステージ（`makeStage()`）は保存していません。学習した後で障害物の配置・速度や`maxSteps`を変えると、読み込みには成功しても別の条件で動きます。ステージを変えたら`train`をやり直してファイルを作り直してください。8.2の`stageText()`を足せば、この食い違いも読み込み時に検出できます（追加課題）。
+4. **ビルド構成の違い。** 学習をRelease、デモをDebugで行った場合、浮動小数点の計算順序が変わって結果がずれる可能性は否定できません。一致しないときは、同じ構成の`sphere_experiment evaluate`の結果と比べて原因を切り分けます。一致を確かめていない構成同士で「同じになる」とは書かないでください。
+
+**完了条件：** `sphere_game`の起動後、AI demoに切り替えると、最終世代のAIが学習時と同じ条件で動き、最初の試行の結果が保存時の成績および`sphere_experiment evaluate`の結果と一致する。読み込みに失敗しても人間の操作は使える。9.2の「保存済みAI」の行と、9.3の比較用の録画（初期・途中・最終世代）にこのモードを使えます。
+
+**追加課題（任意）。** ①ImGuiのコンボボックス（`ImGui::BeginCombo`）で`results/`内の全世代を選べるようにする。②再生速度（1倍・4倍）を選べるようにする。`accumulator`へ足す`elapsed`を倍にするだけで、`dt`は変えないこと（変えると学習時と別の物理になる）。③初期世代と最終世代を交互に再生し、比較動画を撮りやすくする。
+
 <a id="chapter-9"></a>
 
 ## 第9章 検証と作品への仕上げ
@@ -2566,3 +2713,5 @@ WindowsのMSVCビルド、Direct3D 11の表示、DirectXTKとImGuiのリンク�
 第6〜8章は2026年10月25日に、ニューラルネットワークの重みを個体とする方式から、周辺8マスの観測番号ごとに行動を定めた行動表を個体とする方式へ改稿した。あわせて第6〜7章と第8章の保存処理は、関数名・型・引数・手順の説明だけを示す形式へ変更した。改稿後の内容は、どの環境でもビルド・実行していない。上記の2026年10月20日の検証記録は、改稿前のニューラルネットワーク版に対するものである。
 
 2026年10月26日に、第7章の冒頭へ7.1「フォルダとファイルを再構成する」を追加し、第7〜9章のファイルパスと名前（`ActionTable`、`TableAgent`、`TableFile`、`GeneticTrainer`、`sphere_ai`、`ai_tests`）を再構成後のものへ変更した。章の構成と名前の対応を静的に確認しただけで、ビルド・実行はしていない。
+
+2026年10月29日に、8.6「最終世代のAIをウィンドウでデモ再生する」を追加した。現在のリポジトリの`GAAgent`、`SavedGenome`、`loadGenome`、`WindowsMain.cpp`、`Episode.cpp`の呼び出し順と照らし合わせて静的に書いたもので、本文の手順による実装・ビルド・画面での再生は確認していない。

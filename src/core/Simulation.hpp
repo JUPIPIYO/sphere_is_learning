@@ -7,7 +7,10 @@
 
 namespace sil {
 	//座標
-	struct Vec2 { float x{}, z{}; };
+	struct Vec2 
+	{ 
+		float x{}, z{};
+	};
 	//直方体オブジェクト
 	struct Rect {
 		Vec2 center{}, half{}; 
@@ -37,12 +40,11 @@ namespace sil {
 	enum class GameState {Running, Success, Collision, Timeout};
 	std::string StateToStr(GameState s);
 
-
 	struct Obstacle
 	{
 		Shape shape; Vec2 pos; Motion motion;
 
-		Vec2 newPosition(double time);
+		Vec2 newPosition(double time, Vec2 currentPos, Vec2 playerPos, double dt);
 	};
 
 	//障害物の直方体オブジェクト
@@ -91,6 +93,7 @@ namespace sil {
 
 	bool touches(Player p, Rect box);
 	bool overlaps(Rect a, Rect b); //直方体同士の重なりを計算
+	bool overlaps(Rect a, Obstacle o);
 	Stage makeStage();
 
 	//ゲームの実行環境

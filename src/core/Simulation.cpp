@@ -3,6 +3,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <utility>
+#include <numbers>
 using namespace std;
 
 namespace sil {
@@ -18,7 +19,13 @@ namespace sil {
 			const float z = std::clamp(p.z, b.center.z - b.half.z, b.center.z + b.half.z);
 			return (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
 		}
+
+        float distance(Vec2 a, Vec2 b)
+        {
+            return sqrtf((a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z));
+        }
 	}
+
 
     string StateToStr(GameState s)
     {
@@ -82,14 +89,15 @@ namespace sil {
         Shape s = o.shape; 
         if (auto b = std::get_if<Box>(&s))
         {
-            Rect r{o.pos, b->half};
-            return distanceSquared(p.pos, Rect {o.pos, b->half}) <= p.radius * p.radius;
+            Rect r{ o.pos, b->half };
+            return distanceSquared(p.pos, Rect{ o.pos, b->half }) <= p.radius * p.radius;
         }
         else if (auto c = std::get_if<Circle>(&s))
         {
             //Circle同士なので簡単
-            return (p.pos.x - o.pos.x) * (p.pos.x - o.pos.x)  + (p.pos.z - o.pos.z) * (p.pos.z - o.pos.z) <= (p.radius + c->radius) * (p.radius + c->radius);
+            return (p.pos.x - o.pos.x) * (p.pos.x - o.pos.x) + (p.pos.z - o.pos.z) * (p.pos.z - o.pos.z) <= (p.radius + c->radius) * (p.radius + c->radius);
         }
+        else return false;
     }
 
 	//直方体同士の接触判定
@@ -99,21 +107,52 @@ namespace sil {
 			&& abs(a.center.z - b.center.z) <= a.half.z + b.half.z;
 	}
 
-    Vec2 Obstacle::newPosition(double time)
+    //直方体とObstacle
+    //これまでに作ったoverlapとtouchesを転用する
+    bool overlaps(Rect a, Obstacle o)
+    {
+        if (auto s = std::get_if<Box>(&o.shape))
+        {
+            return overlaps(a, Rect{ o.pos, s->half });
+        }
+        else if (auto s = std::get_if<Circle>(&o.shape))
+        {
+            return distanceSquared(o.pos, a) <= s->radius * s->radius;
+        }
+    }
+
+    Vec2 Obstacle::newPosition(double time,Vec2 currentPos , Vec2 playerPos, double dt)
     {
         //TODO : motionごとにtime時点でのposを返す
         Vec2 pos{};
         if(auto m = std::get_if<RoundTrip>(&motion))
         {
-            //RoundTrip
+            const double length = distance(m->start, m->end);
+            double moved_dist = m->speed * time; //これまで進んだ距離
+            double current_dist = fmod(moved_dist, 2 * length);
+            //startとendをどこに内分する点か、割合で求める
+            double per = current_dist <= length ? current_dist / length : (2 * length - current_dist) / length;
+            //xで進んだ距離とzで進んだ距離に引き戻す
+            pos.x = m->start.x + (m->end.x - m->start.x) * per;
+            pos.z = m->start.z + (m->end.z - m->start.z) * per;
         }
         else if(auto m = std::get_if<Orbit>(&motion))
         {
             //円軌道
+            double moved_angle = m->defaultPhase + m->angularSpeed * time;
+            double current_angle = fmod(moved_angle, 360);
+
+            pos.x = m->center.x + m->radius * cosf(current_angle * numbers::pi / 180);
+            pos.z = m->center.z + m->radius * sinf(current_angle * numbers::pi / 180);
+
+
         }
         else if(auto m = std::get_if<Chase>(&motion))
         {
             //追跡してくる
+            float d = distance(playerPos, currentPos);
+            pos.x = currentPos.x + m->speed * dt * (playerPos.x - currentPos.x) / d;
+            pos.z = currentPos.z + m->speed * dt * (playerPos.z - currentPos.z) / d;
         }
 
         return pos;
@@ -164,7 +203,10 @@ namespace sil {
         };
         s.obstacles = {
             {Box{{0.55f, 0.55f}}, {0, 3}, RoundTrip{{0, 3}, {0, 5}, 2.0f}}, 
-            {Box{{0.4f, 0.8f}}, {2, 6}, RoundTrip{{2, 5}, {2, 7}, 1.5f}}, 
+            {Box{{0.4f, 0.8f}}, {2, 6}, RoundTrip{{2, 5}, {2, 7}, 1.5f}},
+            { Circle{0.3f} , {1, 4}, Orbit{ {1, 3} ,1, 180.0f, 0 } },
+            { Circle{0.3f} , {0, 5}, Chase{2.0f} },
+            { Circle{0.6f} , {-1, 3}, Chase{1.0f} },
             //{ {{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f},
            //{ {{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f}
         };
@@ -184,7 +226,7 @@ namespace sil {
         //ステージ内の各obstavleについて、不正を探す
         for (const auto& o : stage_.obstacles) 
         {
-            if (true /*TODO  obstacleごとの不正発見*/) throw std::invalid_argument("invalid obstacle"); 
+            if (false /*TODO  obstacleごとの不正発見*/) throw std::invalid_argument("invalid obstacle"); 
         }
         reset(0);
         if (blocked(state_.player.pos)) throw std::invalid_argument("start is blocked");
@@ -197,6 +239,10 @@ namespace sil {
         state_.currentStep = 0;
         state_.gameState = GameState::Running;
         state_.obstacles.resize(stage_.obstacles.size());
+        for (int i = 0 ; i < stage_.obstacles.size();i++)
+        {
+            state_.obstacles[i]= stage_.obstacles[i];
+        }
 
         //現在のZ座標をbestに設定
         bestZ_ = stage_.player.pos.z;
@@ -204,10 +250,10 @@ namespace sil {
     }
 
     void Environment::placeObstacles(double time) {
-        for (std::size_t i = 0; i < stage_.obstacles.size(); ++i) 
+        for (std::size_t i = 0; i < state_.obstacles.size(); ++i) 
         {
-            Obstacle& o = stage_.obstacles[i];
-            state_.obstacles[i] = Obstacle{o.shape, o.newPosition(time), o.motion};
+            Obstacle& o = state_.obstacles[i];
+            state_.obstacles[i] = Obstacle{o.shape, o.newPosition(time, o.pos, state().player.pos, dt), o.motion};
         }
     }
 
