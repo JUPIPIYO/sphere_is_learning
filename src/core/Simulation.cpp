@@ -77,6 +77,21 @@ namespace sil {
 		return distanceSquared(p.pos, b) <= p.radius * p.radius;
 	}
 
+    bool touches(Player p, Obstacle o)
+    {
+        Shape s = o.shape; 
+        if (auto b = std::get_if<Box>(&s))
+        {
+            Rect r{o.pos, b->half};
+            return distanceSquared(p.pos, Rect {o.pos, b->half}) <= p.radius * p.radius;
+        }
+        else if (auto c = std::get_if<Circle>(&s))
+        {
+            //Circle同士なので簡単
+            return (p.pos.x - o.pos.x) * (p.pos.x - o.pos.x)  + (p.pos.z - o.pos.z) * (p.pos.z - o.pos.z) <= (p.radius + c->radius) * (p.radius + c->radius);
+        }
+    }
+
 	//直方体同士の接触判定
 	bool overlaps(Rect a, Rect b)
 	{
@@ -84,8 +99,28 @@ namespace sil {
 			&& abs(a.center.z - b.center.z) <= a.half.z + b.half.z;
 	}
 
+    Vec2 Obstacle::newPosition(double time)
+    {
+        //TODO : motionごとにtime時点でのposを返す
+        Vec2 pos{};
+        if(auto m = std::get_if<RoundTrip>(&motion))
+        {
+            //RoundTrip
+        }
+        else if(auto m = std::get_if<Orbit>(&motion))
+        {
+            //円軌道
+        }
+        else if(auto m = std::get_if<Chase>(&motion))
+        {
+            //追跡してくる
+        }
+
+        return pos;
+    }
+
     //更新位置
-    Vec2 ObstacleRect::currentPosition(double time)
+    Rect ObstacleRect::currentPosition(double time)
     {
         const double length = high - low;
         double moved_dist = speed * time; //これまで進んだ距離
@@ -128,8 +163,10 @@ namespace sil {
             {{0, -1}, {5, 0.1f}}, {{0, 11}, {5, 0.1f}} ,
         };
         s.obstacles = {
-            { {{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f},
-           { {{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f}
+            {Box{{0.55f, 0.55f}}, {0, 3}, RoundTrip{{0, 3}, {0, 5}, 2.0f}}, 
+            {Box{{0.4f, 0.8f}}, {2, 6}, RoundTrip{{2, 5}, {2, 7}, 1.5f}}, 
+            //{ {{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f},
+           //{ {{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f}
         };
         return s;
     }
@@ -145,10 +182,9 @@ namespace sil {
         }
 
         //ステージ内の各obstavleについて、不正を探す
-        for (const auto& o : stage_.obstacles) {
-            if (!(o.high > o.low) || !(o.speed >= 0) || !(o.phase >= 0)|| !(o.box.half.x > 0) || !(o.box.half.z > 0)) {
-                throw std::invalid_argument("invalid obstacle");
-            }
+        for (const auto& o : stage_.obstacles) 
+        {
+            if (true /*TODO  obstacleごとの不正発見*/) throw std::invalid_argument("invalid obstacle"); 
         }
         reset(0);
         if (blocked(state_.player.pos)) throw std::invalid_argument("start is blocked");
@@ -170,9 +206,8 @@ namespace sil {
     void Environment::placeObstacles(double time) {
         for (std::size_t i = 0; i < stage_.obstacles.size(); ++i) 
         {
-            auto& o = stage_.obstacles[i];
-
-            state_.obstacles[i] = o.currentPosition(time);
+            Obstacle& o = stage_.obstacles[i];
+            state_.obstacles[i] = Obstacle{o.shape, o.newPosition(time), o.motion};
         }
     }
 
@@ -214,7 +249,7 @@ namespace sil {
 
         //goal or 障害物接触を判定
         goaled = goaled || touches(state_.player, stage_.goal);
-        for (const auto& box : state_.obstacles) hit = hit || touches(state_.player, box);
+        for (const auto& o : state_.obstacles) hit = hit || touches(state_.player, o);
 
         /*
         for (int part = 1; part <= parts; ++part) {

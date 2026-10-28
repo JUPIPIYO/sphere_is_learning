@@ -21,8 +21,8 @@ namespace sil {
 
 	//動き
 	struct Fixed {};
-	struct RoundTrip { float low{}, high{}, speed{}; };
-	struct Orbit { Vec2 center; float radius{}, angularSpeed{}; };
+	struct RoundTrip { Vec2 start{}, end{}; float speed{}; };
+	struct Orbit { Vec2 center; float radius{}, angularSpeed{}, defaultPhase{}; };
 	struct Chase { float speed; };
 	using Motion = std::variant<Fixed, RoundTrip, Orbit, Chase>;
 
@@ -41,6 +41,8 @@ namespace sil {
 	struct Obstacle
 	{
 		Shape shape; Vec2 pos; Motion motion;
+
+		Vec2 newPosition(double time);
 	};
 
 	//障害物の直方体オブジェクト
@@ -49,7 +51,7 @@ namespace sil {
 		Rect box;
 		Axis axis{ Axis::X };
 		float low{}, high{}, speed{};
-		Vec2 currentPosition(double time);
+		Rect currentPosition(double time);
 	};
 
 	struct Player 
@@ -68,7 +70,7 @@ namespace sil {
 		int maxSteps{ 1200 };
 		std::vector<Rect> walls;
 		//障害物の初期位置
-		std::vector<ObstacleRect> obstacles;
+		std::vector<Obstacle> obstacles;
 		Rect goal;
 	};
 
