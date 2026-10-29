@@ -48,6 +48,10 @@ if(BUILD_TESTING)
     endif()
 endif()
 
+
+add_executable(sphere_experiment src/app/AgentMain.cpp)
+target_link_libraries(sphere_experiment PRIVATE sphere_ai)
+
 if(WIN32)
     set(BUILD_TOOLS OFF CACHE BOOL "Build DirectXTK auxiliary tools" FORCE)
     set(BUILD_XAUDIO_WIN8 OFF CACHE BOOL "Build DirectXTK audio" FORCE)
@@ -79,7 +83,16 @@ if(WIN32)
         target_compile_options(sphere_game PRIVATE /W4 /permissive- /utf-8)
     endif()
 
-add_executable(sphere_experiment src/app/AgentMain.cpp)
-target_link_libraries(sphere_experiment PRIVATE sphere_ai)
+    # 保存済みの最終世代AIをウィンドウで再生するデモ
+    add_executable(sphere_aidemo WIN32
+        src/app/AiDemoMain.cpp
+        src/renderer/directX11/Renderer.cpp
+        src/renderer/directX11/Renderer.hpp)
+    target_include_directories(sphere_aidemo PRIVATE src)
+    target_compile_definitions(sphere_aidemo PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+    target_link_libraries(sphere_aidemo PRIVATE sphere_ai sil_imgui DirectXTK user32 shell32 d3d11 dxgi)
+    if(MSVC)
+        target_compile_options(sphere_aidemo PRIVATE /W4 /permissive- /utf-8)
+    endif()
 
 endif()
