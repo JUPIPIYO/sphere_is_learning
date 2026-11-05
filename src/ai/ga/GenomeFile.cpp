@@ -5,6 +5,7 @@
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <filesystem>
 
 using namespace std;
 
@@ -35,7 +36,7 @@ namespace sil
 		return out.str();
 	}
 
-	void saveGenome(const string& path, const SavedGenome& saved)
+	void saveGenome(const string& dir, const string& path, const SavedGenome& saved)
 	{
 		//遺伝子を文字列に
 		string genesLine(saved.genes.size(), '0');
@@ -44,8 +45,15 @@ namespace sil
 			genesLine[i] = static_cast<char>('0' + saved.genes[i]);
 		}
 
-		ofstream out(path);
-		if (!out) fail(path, "cannot open for writing");
+		if (!std::filesystem::exists(dir))
+		{
+			std::filesystem::create_directories(dir);
+		}
+
+		std::filesystem::path filePath = dir + '/' + path;
+
+		ofstream out(filePath);
+		if (!out) fail(dir + '/' + path, "cannot open for writing");
 
 		const Metrics& m = saved.metrics;
 		out << setprecision(numeric_limits<float>::max_digits10);
@@ -63,7 +71,8 @@ namespace sil
 	SavedGenome loadGenome(const string& path)
 	{
 		ifstream in(path);
-		if (!in) fail(path, "cannot open for reading");
+		string failStr = format("cannot open for reading : {} : On GenomeFile.cpp", path);
+		if (!in) fail(path, failStr);
 
 		string header;
 		if (!(in >> header) || header != fileHeader) fail(path, "unknown header");

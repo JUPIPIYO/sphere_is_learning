@@ -20,7 +20,7 @@ namespace sil
 	};
 
 	//pathへ上書き保存する。失敗したらstd::runtime_errorを投げる
-	void saveGenome(const std::string& path, const SavedGenome& saved);
+	void saveGenome(const std::string& dir, const std::string& path, const SavedGenome& saved);
 
 	//pathから読み込む。形式やmodelText()が一致しなければstd::runtime_errorを投げる
 	SavedGenome loadGenome(const std::string& path);

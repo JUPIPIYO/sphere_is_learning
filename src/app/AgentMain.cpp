@@ -84,12 +84,13 @@ namespace
             cout << generation << ',' << m.fitness << ',' << mean << ',' << farthest->metrics.bestZ
                 << ',' << m.surviveSeconds << ',' << StateToStr(m.end) << ',' << static_cast<int>(m.end) << '\n';
 
-            //最初、中間、最後の3回でsave
-            if (generation == 0 || generation == o.generations / 2 || generation == o.generations) 
+            //最初、中間、最後の3回および50回ごとにsave
+            if (generation == 0 || generation == o.generations / 2 || generation == o.generations || generation % 50 == 0) 
             {
-                const std::string prefix = o.output + "_g" + to_string(generation);
-                saveGenome(prefix + "_fitness.sil", { best.gene, generation, o.seed,  best.metrics });
-                saveGenome(prefix + "_distance.sil", { farthest->gene, generation, o.seed, farthest->metrics });
+                const std::string dir = "results/GA/seed" + std::to_string(o.seed);
+                const std::string epoch = to_string(generation);
+                saveGenome(dir, epoch + "_fitness.sil", { best.gene, generation, o.seed,  best.metrics });
+                saveGenome(dir, epoch + "_distance.sil", { farthest->gene, generation, o.seed, farthest->metrics });
             }
             if (generation != o.generations) population = nextPopulation(population, random);
         }

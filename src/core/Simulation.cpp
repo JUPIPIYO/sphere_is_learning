@@ -187,26 +187,48 @@ namespace sil {
 
     Stage makeStage() {
         Stage s;
-        s.bounds = { {0, 5}, {5, 6} };
+        //s.bounds = { {0, 5}, {5, 6} }; //stage 1
+        s.bounds = { {0, 10}, {5, 11} }; //stage 2
+        //s.bounds = { {0, 15}, {6, 16} }; //stage 3
 
         Player p;
         p.pos = { 0, 0 };
         s.player = p;
 
-        s.goal = { {0, 10}, {4.5f, 0.25f} };
+        s.goal = { {0, s.bounds.center.z * 2}, {8, 0.25f} };
+
+        //boundsから自動計算
+        float x_max = s.bounds.half.x;
+        float z_min = -1.0f;
+        float z_max = s.bounds.center.z + s.bounds.half.z;
+        float center_z = s.bounds.center.z;
+        float x_length_half = s.bounds.half.x;
+        float z_length_half = s.bounds.half.z;
         s.walls = 
         { 
-            //横の壁
-            {{-5.0f, 5}, {0.2f, 6}}, {{5.0f, 5}, {0.2f, 6}} ,
-            //縦の壁
-            {{0, -1}, {5, 0.1f}}, {{0, 11}, {5, 0.1f}} ,
+            //横の壁 : | |
+            {{-1 * x_max, center_z}, {0.2f, z_length_half}}, {{x_max, center_z}, {0.2f, z_length_half}} ,
+            //縦の壁 : ＝
+            {{0, z_min}, {x_length_half, 0.1f}}, {{0, z_max}, {x_length_half, 0.1f}} ,
+
+            {{3, 13}, {2.5f, 0.2f}},//stage 2
         };
         s.obstacles = {
+            //stage 1
             {Box{{0.55f, 0.55f}}, {0, 3}, RoundTrip{{0, 3}, {0, 5}, 2.0f}}, 
             {Box{{0.4f, 0.8f}}, {2, 6}, RoundTrip{{2, 5}, {2, 7}, 1.5f}},
-            { Circle{0.3f} , {1, 4}, Orbit{ {1, 3} ,1, 180.0f, 0 } },
+            { Circle{0.5f} , {1, 4}, Orbit{ {1, 3} ,1, 180.0f, 0 } },
             { Circle{0.3f} , {0, 5}, Chase{2.0f} },
-            { Circle{0.6f} , {-1, 3}, Chase{1.0f} },
+            //stage 2
+            { Circle{0.7f} , {-3, 2}, Chase{1.5f} },
+            {Box{{0.4f, 0.8f}}, {3, 3}, Orbit{{3, 8}, 3 , 180, 2.5f}},
+            {Circle{0.5f}, {2, 6}, Orbit{{-2, 14}, 2 , 240, 4.0f}},
+            {Circle{0.7f}, {2, 6}, RoundTrip{{-1, 5}, {-3, 18}, 4.0f}},
+            //stage 3
+            //{Box{{1.0f, 1.0f}}, {2, 6}, RoundTrip{{-1, 5}, {-3, 20}, 3.0f}},
+            //{Box{{1.0f, 1.0f}}, {2, 6}, RoundTrip{{4, 16}, {-3, 22}, 4.0f}},
+            //{Box{{0.7f, 0.4f}}, {3, 3}, Orbit{{0, 17}, 5 , 90, 5.0f}},
+            //{Box{{2.0f, 0.5f}}, {2, 6}, RoundTrip{{-3, 25}, {3, 25}, 2.5f}},
             //{ {{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f},
            //{ {{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f}
         };

@@ -5,14 +5,26 @@
 #include <exception>
 #include <stdexcept>
 #include <string>
+#include <iostream>
 
 #include "core/Simulation.hpp"
 #include "renderer/directX11/Renderer.hpp"
+#include "ai/ga/GenomeFile.hpp"
 
 //ImGui関連
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx11.h>
+
+//AIファイルの読み込み関連
+#include <filesystem>
+#include <string_view>
+#include <charconv>
+#include <optional>
+#include <format>
+
+#include <shellapi.h>
+#include <memory>
 
 using namespace sil;
 using namespace std;
@@ -47,29 +59,12 @@ namespace
         }
     };
 
-    Direc readDirec()
+
+    void advanceGame(Environment& env, GAAgent* agent, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards)
     {
-        //WASDの入力内容を下にDirecを作成
-        int w = 0x57;
-        int a = 0x41;
-        int s = 0x53;
-        int d = 0x44;
-
-        int x = 0; int z = 0;
-
-        if ((GetAsyncKeyState(d) && 0x8000) != 0) x += 1;
-        if ((GetAsyncKeyState(a) && 0x8000) != 0) x -= 1;
-
-        if ((GetAsyncKeyState(w) && 0x8000) != 0) z += 1;
-        if ((GetAsyncKeyState(s) && 0x8000) != 0) z -= 1;
-
-        auto direc = direcFromAxes(x, z);
-        return direc;
-    }
-
-    void advanceGame(Environment& env, Direc nextDirec, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards)
-    {
-        auto result = env.step(nextDirec);
+        //ここでnextDirecを呼ぶ
+        Direc d = agent->nextDirec(env);
+        auto result = env.step(d);
 
         if (result.end != GameState::Running)
         {
@@ -80,6 +75,7 @@ namespace
             lastRewards.push_back(lastReward);
 
             env.reset(initialSeed);
+            agent->reset();
         }
     }
 
@@ -171,7 +167,53 @@ namespace
         bool dx11Ready_ = false;
     };
 
+    //追加：保存したAIファイルを探す
+    //ファイル名は'results/GA/seedXX/{epoch}_distance.sil' or 'seedXX/g{epoch}_fitness.sil'
+    //seedXXはpath時点で指定
+    //kind : 「fitness」 or 「distance」
+    std::optional<std::filesystem::path> findLatestGenome(const std::filesystem::path& folder,std::string_view kind)
+    {
+        //ファイルの存在を確認
+        if (!std::filesystem::exists(folder)) return std::nullopt;
 
+        std::filesystem::path path;
+        int maxEpisode = 0;
+        //フォルダ内を一つずつ精査
+        for (auto& entry : std::filesystem::directory_iterator(folder))
+        {
+            if (!entry.is_regular_file()) continue;
+
+            //1文字目のepochが最大のものを設定
+            auto currentPath = entry.path();
+            string endPrefix = "_" + std::string(kind) + ".sil";
+            if (!currentPath.filename().string().ends_with(endPrefix)) continue;
+
+            int currentEp = std::stoi(entry.path().filename().string().substr(0, 1));
+            
+            if (currentEp >= maxEpisode)
+            {
+                maxEpisode = currentEp;
+                path = currentPath;
+            }
+
+        }
+
+        if (path.empty()) return std::nullopt;
+
+        return path;
+    }
+
+    struct LocalFreeDeleter {
+        void operator()(wchar_t** p) const { LocalFree(p); }
+    };
+
+    // 起動引数の1つ目（なければ空）を返す
+    std::filesystem::path firstArgument() {
+        int count = 0;
+        std::unique_ptr<wchar_t*, LocalFreeDeleter> args(CommandLineToArgvW(GetCommandLineW(), &count));
+        if (!args || count < 2) return {};
+        return args.get()[1];   // [0]はexe自身のパス
+    }
 }
 
 
@@ -179,6 +221,33 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 {
     HWND window = nullptr;
     try {
+
+        std::filesystem::path genomePath = firstArgument();
+        if (genomePath.empty()) {
+            const auto latest = findLatestGenome("results/GA/seed42/","distance");
+            if (!latest) throw std::runtime_error("results/GA/seed42/ has no *_distance.sil");
+            genomePath = *latest;
+        }
+
+        //現ディレクトリ上のファイルを全取得
+        std::filesystem::path dirPath = "results/GA/seed42";
+        vector<filesystem::path> files;
+        for (auto& entry : std::filesystem::directory_iterator(dirPath))
+        {
+            if (!entry.is_regular_file()) continue;
+
+            files.push_back(entry.path());
+        }
+
+        //savedをちゃんと変数として宣言しないと消える
+        SavedGenome saved = loadGenome(genomePath.string());  
+        GAAgent agent{ saved.genes };                                
+        std::string genomeName = genomePath.filename().string();
+
+        vector<int> speeds = { 1, 2, 4 };
+        int currentSpeed = 1;
+
+
         //ここらへんガチでなにやってるかわからん
         constexpr wchar_t className[] = L"SphereIsLearningAIDemoWindow";
         WNDCLASSEXW windowClass{};
@@ -222,6 +291,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
         Environment env{ makeStage() };
         env.reset(initialSeed);
+        agent.reset();
 
         GameState lastEnd = GameState::Running;
         float lastReward = 0;
@@ -303,6 +373,65 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                     }
                 }
 
+
+                static size_t selected_idx = 0;
+                if (ImGui::BeginCombo("Select File", genomeName.c_str())) 
+                {
+                    for (size_t n = 0; n < files.size(); n++) {
+                        bool is_selected = (selected_idx == n);
+
+                        // リストに表示する文字列（ここではファイル名だけを表示）
+                        std::filesystem::path filePath =  files[n];
+
+                        if (ImGui::Selectable(filePath.filename().string().c_str(), is_selected))
+                        {
+                            selected_idx = n; // インデックスを更新
+
+                            //ここで指定されているファイルにGenomeを更新し、全てreset
+                            saved = loadGenome(filePath.string());
+                            GAAgent agent{ saved.genes };
+                            genomeName = filePath.filename().string();
+
+                            env.reset(initialSeed);
+                            agent.reset();
+                        }
+
+                        if (is_selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+
+                static size_t speed_idx = 0;
+                //倍速
+                if (ImGui::BeginCombo("SPEED", to_string(currentSpeed).c_str()))
+                {
+                    for (size_t i = 0; i < speeds.size(); i++)
+                    {
+                        bool is_selected = (speed_idx == i);
+
+                        // リストに表示する文字列（ここではファイル名だけを表示）
+                        int speed = speeds[i];
+
+                        if (ImGui::Selectable(to_string(speed).c_str(), is_selected))
+                        {
+                            speed_idx = i; // インデックスを更新
+                            currentSpeed = speed;
+                        }
+
+                        if (is_selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+
+
+                //AI表示
+                ImGui::Text("read File : %s, epoch : %d, seed : %d", genomeName, saved.generation, saved.seed);
+                ImGui::Text("bestZ : %d, survivedSec : %d, result : %s", saved.metrics.bestZ, saved.metrics.surviveSeconds, StateToStr(saved.metrics.end));
+
                 //残り時間と前回の結果を表示
 
                 int j = 0;
@@ -324,13 +453,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
             if (mainPlaying)
             {
-                const auto direc = ImGui::GetIO().WantCaptureKeyboard
-                    ? sil::Direc::Stop : readDirec();
-                accumulator += elapsed;
+                accumulator += elapsed * currentSpeed;
 
                 while (accumulator >= sil::Environment::dt)
                 {
-                    advanceGame(env, direc, lastEnd, initialSeed, lastReward, lastResults, lastRewards);
+                    advanceGame(env, &agent, lastEnd, initialSeed, lastReward, lastResults, lastRewards);
                     accumulator -= sil::Environment::dt;
                 }
             }

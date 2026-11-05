@@ -61,7 +61,7 @@ namespace sil {
 		Vec2 pos;
 		//プレイヤーの設定
 		float radius{ 0.3f };
-		float speed{ 3.0f };
+		float speed{ 4.5f };
 	};
 
 	//Stateの初期状態
