@@ -17,7 +17,8 @@ add_library(sphere_ai
     src/ai/common/Episode.cpp
     src/ai/ga/GAAgent.cpp 
     src/ai/ga/GenomeFile.cpp
-    src/ai/ga/GATrainer.cpp)
+    src/ai/ga/GATrainer.cpp
+    src/ai/Astar/AstarAgent.cpp)
 target_link_libraries(sphere_ai PUBLIC sphere_core)
 if(MSVC)
     target_compile_options(sphere_ai PRIVATE /W4 /permissive- /utf-8)

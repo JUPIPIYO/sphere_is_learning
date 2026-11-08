@@ -10,6 +10,7 @@
 #include "core/Simulation.hpp"
 #include "renderer/directX11/Renderer.hpp"
 #include "ai/ga/GenomeFile.hpp"
+#include "ai/Astar/AstarAgent.hpp"
 
 //ImGui関連
 #include <imgui.h>
@@ -60,7 +61,7 @@ namespace
     };
 
 
-    void advanceGame(Environment& env, GAAgent* agent, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards)
+    void advanceGame(Environment& env, Agent* agent, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards)
     {
         //ここでnextDirecを呼ぶ
         Direc d = agent->nextDirec(env);
@@ -206,13 +207,12 @@ namespace
     struct LocalFreeDeleter {
         void operator()(wchar_t** p) const { LocalFree(p); }
     };
-
-    // 起動引数の1つ目（なければ空）を返す
-    std::filesystem::path firstArgument() {
+    std::vector<std::wstring> commandLineArgs()
+    {
         int count = 0;
         std::unique_ptr<wchar_t*, LocalFreeDeleter> args(CommandLineToArgvW(GetCommandLineW(), &count));
-        if (!args || count < 2) return {};
-        return args.get()[1];   // [0]はexe自身のパス
+        if (!args) return {};
+        return { args.get(), args.get() + count };   // [0]はexe自身
     }
 }
 
@@ -221,31 +221,52 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 {
     HWND window = nullptr;
     try {
+        const auto args = commandLineArgs();
 
-        std::filesystem::path genomePath = firstArgument();
-        if (genomePath.empty()) {
-            const auto latest = findLatestGenome("results/GA/seed42/","distance");
-            if (!latest) throw std::runtime_error("results/GA/seed42/ has no *_distance.sil");
-            genomePath = *latest;
-        }
+        //modelを選定
+        const std::wstring model = args.size() > 1 ? args[1] : L"ga";
 
-        //現ディレクトリ上のファイルを全取得
-        std::filesystem::path dirPath = "results/GA/seed42";
+        std::unique_ptr<Agent> agent;
+
+        std::string genomeName;
         vector<filesystem::path> files;
-        for (auto& entry : std::filesystem::directory_iterator(dirPath))
+        SavedGenome saved;
+        if (model == L"ga")
         {
-            if (!entry.is_regular_file()) continue;
+            std::filesystem::path genomePath = args[2];
+            if (genomePath.empty()) {
+                const auto latest = findLatestGenome("results/GA/seed42/", "distance");
+                if (!latest) throw std::runtime_error("results/GA/seed42/ has no *_distance.sil");
+                genomePath = *latest;
+            }
 
-            files.push_back(entry.path());
+            //現ディレクトリ上のファイルを全取得
+            std::filesystem::path dirPath = "results/GA/seed42";
+            for (auto& entry : std::filesystem::directory_iterator(dirPath))
+            {
+                if (!entry.is_regular_file()) continue;
+
+                files.push_back(entry.path());
+            }
+
+            //savedをちゃんと変数として宣言しないと消える
+            saved = loadGenome(genomePath.string());
+            agent = std::make_unique<GAAgent>(saved.genes);
+            genomeName = genomePath.filename().string();
         }
-
-        //savedをちゃんと変数として宣言しないと消える
-        SavedGenome saved = loadGenome(genomePath.string());  
-        GAAgent agent{ saved.genes };                                
-        std::string genomeName = genomePath.filename().string();
+        else if (model == L"astar")
+        {
+            int expandDepth = std::stoi((args[2]));
+            int maxExpand = std::stoi((args[3]));
+            agent = std::make_unique<AstarAgent>(expandDepth, maxExpand);
+        }
+        else throw std::invalid_argument("unknown model");
 
         vector<int> speeds = { 1, 2, 4 };
         int currentSpeed = 1;
+
+        vector<int> stages = { 1, 2, 3, 4 };
+        int currentStage = 1;
 
 
         //ここらへんガチでなにやってるかわからん
@@ -289,9 +310,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
         constexpr uint32_t initialSeed = 42;
 
-        Environment env{ makeStage() };
+        Environment env{ makeStage(currentStage) };
         env.reset(initialSeed);
-        agent.reset();
+        agent->reset();
 
         GameState lastEnd = GameState::Running;
         float lastReward = 0;
@@ -303,8 +324,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         bool running = true;
         ShowWindow(window, showCommand);
 
-        //ステージ選択部分を表示するための変数
-        int selectedStage = 0;
         bool mainPlaying = false;
 
         //過去のリザルトを5回分だけ保持して、表示する
@@ -355,8 +374,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
             ImGui::NewFrame();
 
             if (ImGui::Begin("Stage selection")) {
-                //ステージの選択ボタンを表示
-                ImGui::RadioButton("Stage 1", &selectedStage, 0);
 
                 if (!mainPlaying)
                 {
@@ -374,35 +391,42 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 }
 
 
-                static size_t selected_idx = 0;
-                if (ImGui::BeginCombo("Select File", genomeName.c_str())) 
+                if (model == L"ga")
                 {
-                    for (size_t n = 0; n < files.size(); n++) {
-                        bool is_selected = (selected_idx == n);
+                    static size_t selected_idx = 0;
+                    if (ImGui::BeginCombo("Select File", genomeName.c_str()))
+                    {
+                        for (size_t n = 0; n < files.size(); n++) {
+                            bool is_selected = (selected_idx == n);
 
-                        // リストに表示する文字列（ここではファイル名だけを表示）
-                        std::filesystem::path filePath =  files[n];
+                            // リストに表示する文字列（ここではファイル名だけを表示）
+                            std::filesystem::path filePath = files[n];
 
-                        if (ImGui::Selectable(filePath.filename().string().c_str(), is_selected))
-                        {
-                            selected_idx = n; // インデックスを更新
+                            if (ImGui::Selectable(filePath.filename().string().c_str(), is_selected))
+                            {
+                                selected_idx = n; // インデックスを更新
 
-                            //ここで指定されているファイルにGenomeを更新し、全てreset
-                            saved = loadGenome(filePath.string());
-                            GAAgent agent{ saved.genes };
-                            genomeName = filePath.filename().string();
+                                //ここで指定されているファイルにGenomeを更新し、全てreset
+                                saved = loadGenome(filePath.string());
+                                agent = std::make_unique<GAAgent>(saved.genes);
+                                genomeName = filePath.filename().string();
 
-                            env.reset(initialSeed);
-                            agent.reset();
+                                env.reset(initialSeed);
+                                agent->reset();
+                            }
+
+                            if (is_selected) {
+                                ImGui::SetItemDefaultFocus();
+                            }
                         }
-
-                        if (is_selected) {
-                            ImGui::SetItemDefaultFocus();
-                        }
+                        ImGui::EndCombo();
                     }
-                    ImGui::EndCombo();
-                }
 
+                    //AI表示
+                    ImGui::Text("read File : %s, epoch : %d, seed : %u", genomeName.c_str(), saved.generation, saved.seed);
+                    ImGui::Text("bestZ : %f, survivedSec : %f, result : %s", saved.metrics.bestZ, saved.metrics.surviveSeconds, StateToStr(saved.metrics.end).c_str());
+
+                }
                 static size_t speed_idx = 0;
                 //倍速
                 if (ImGui::BeginCombo("SPEED", to_string(currentSpeed).c_str()))
@@ -427,10 +451,35 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                     ImGui::EndCombo();
                 }
 
+                static size_t stage_idx = 0;
+                //ステージ
+                if (ImGui::BeginCombo("STAGE", to_string(currentStage).c_str()))
+                {
+                    for (size_t i = 0; i < stages.size(); i++)
+                    {
+                        bool is_selected = (stage_idx == i);
 
-                //AI表示
-                ImGui::Text("read File : %s, epoch : %d, seed : %d", genomeName, saved.generation, saved.seed);
-                ImGui::Text("bestZ : %d, survivedSec : %d, result : %s", saved.metrics.bestZ, saved.metrics.surviveSeconds, StateToStr(saved.metrics.end));
+                        int stage = stages[i];
+
+                        if (ImGui::Selectable(to_string(stage).c_str(), is_selected))
+                        {
+                            stage_idx = i; // インデックスを更新
+                            //違うステージになるならハードリセット
+                            if (currentStage != stage)
+                            {
+                                currentStage = stage;
+                                env = Environment(makeStage(currentStage));
+                                env.reset(initialSeed);
+                                agent->reset();
+                            }
+                        }
+
+                        if (is_selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
 
                 //残り時間と前回の結果を表示
 
@@ -457,7 +506,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
                 while (accumulator >= sil::Environment::dt)
                 {
-                    advanceGame(env, &agent, lastEnd, initialSeed, lastReward, lastResults, lastRewards);
+                    advanceGame(env, agent.get(), lastEnd, initialSeed, lastReward, lastResults, lastRewards);
                     accumulator -= sil::Environment::dt;
                 }
             }

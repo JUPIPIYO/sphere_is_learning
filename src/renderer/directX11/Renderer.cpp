@@ -198,7 +198,7 @@ namespace sil::renderer {
 		float ObsBoxHeight = 0.5f;
 		drawRect(*cube_, stage.bounds, boundHeight / 2, boundHeight, XMVectorSet(0.0f, 0.0f, 0.5f, 1.0f), view, projection);
 		//ゴール
-		drawRect(*cube_, stage.goal, 0.15f, 0.3f, XMVectorSet(0.2f, 0.8f, 0.2f, 1.0f), view, projection);
+		drawRect(*cube_, stage.goal, 0.15f, 0.3f, XMVectorSet(1.0f, 1.0f, 0, 1.0f), view, projection);
 		//壁
 		for (int i = 0; i < stage.walls.size(); i++)
 		{

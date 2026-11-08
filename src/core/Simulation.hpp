@@ -29,6 +29,8 @@ namespace sil {
 	struct Chase { float speed; };
 	using Motion = std::variant<Fixed, RoundTrip, Orbit, Chase>;
 
+	inline constexpr float boundX = 6;
+
 
 	//方向：左右がX、上下がZ
 	enum class Axis {X, Z};
@@ -61,7 +63,7 @@ namespace sil {
 		Vec2 pos;
 		//プレイヤーの設定
 		float radius{ 0.3f };
-		float speed{ 4.5f };
+		float speed{ 3.5f };
 	};
 
 	//Stateの初期状態
@@ -69,7 +71,7 @@ namespace sil {
 		Rect bounds;
 		Player player;
 		//制限時間(60fpsでの)
-		int maxSteps{ 1200 };
+		int maxSteps{ 20 * 60 };
 		std::vector<Rect> walls;
 		//障害物の初期位置
 		std::vector<Obstacle> obstacles;
@@ -94,13 +96,15 @@ namespace sil {
 	bool touches(Player p, Rect box);
 	bool overlaps(Rect a, Rect b); //直方体同士の重なりを計算
 	bool overlaps(Rect a, Obstacle o);
-	Stage makeStage();
+	Stage makeStage(int stageIdx);
 
 	//ゲームの実行環境
 	class Environment {
 	public:
 		static constexpr double dt = 1.0 / 60.0; //60fps
 		explicit Environment(Stage stage);
+		//Astar用：stateもその時点でいれる
+		explicit Environment(Stage stage, State state);
 		void reset(std::uint32_t seed); //ゲーム状態をもとに戻す関数
 		StepResult step(Direc action);
 		const Stage& stage() const { return stage_; }
@@ -108,6 +112,7 @@ namespace sil {
 		const float bestZ() const { return bestZ_; }
 		const float remainSec() const { return static_cast<float>((stage().maxSteps - state().currentStep) * dt); }
 		const float surviveSec() const {return static_cast<float>(state().currentStep * dt);}
+
 	private:
 		bool blocked(Vec2 position) const;
 		void placeObstacles(double time);

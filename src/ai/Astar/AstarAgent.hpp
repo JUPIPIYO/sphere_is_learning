@@ -1,0 +1,42 @@
+﻿#pragma once
+#include "core/Simulation.hpp"
+#include "ai/common/Observation.hpp"
+#include "ai/common/Agent.hpp"
+#include <functional>   // std::greater
+#include <queue>
+#include <utility>      // std::pair
+#include <vector>
+
+namespace sil
+{
+	//展開する深さは100程度に束縛する
+	inline constexpr int macroStep = 10;
+	inline constexpr int planDirecSize = 5;
+	inline constexpr int samePlanStep = macroStep * planDirecSize;
+
+	class AstarAgent : public Agent
+	{
+	public:
+		explicit AstarAgent(int _expandDepth, int _maxExpand);
+		void reset() override;
+		//envを読み出して次の行動を策定
+		Direc nextDirec(const Environment& env) override;
+	private:
+		int currentStep_{};
+		Direc current_{ Direc::Stop };
+		std::array<Direc, planDirecSize> planDirec;
+		int expandDepth;
+		int maxExpand;
+	};
+
+	struct Node {
+		Environment Env; //現在の環境
+		int g;           // 経過step数
+		int h;         // 右端までの推定step数
+		int parent;      // 親ノードが 何番目か
+		Direc direc;   // 親からここに来た行動(方向)
+	};
+
+	using Entry = std::pair<int, int>;
+	using f_que = std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>>;
+}

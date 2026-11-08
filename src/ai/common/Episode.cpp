@@ -12,7 +12,7 @@ namespace sil
 	Metrics evaluate(Agent& agent, uint32_t seed)
 	{
 		//環境を作成し、実際にどんな成果を生み出すかを判定
-		Environment env(makeStage());
+		Environment env(makeStage(3));
 		env.reset(seed);
 
 

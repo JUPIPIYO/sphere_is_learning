@@ -185,11 +185,31 @@ namespace sil {
         return b;
     }
 
-    Stage makeStage() {
+    Stage makeStage(int stageIdx) {
+        if (stageIdx < 1 || 4 < stageIdx)
+        {
+            throw std::runtime_error("その添字のステージは存在しません");
+        }
+
         Stage s;
+        switch (stageIdx)
+        {
+        case 1:
+            s.bounds = { {0, 5}, {5, 6} };
+            break;
+        case 2:
+            s.bounds = { {0, 10}, {5, 11} };
+            break;
+        case 3:
+            s.bounds = { {0, 15}, {boundX, 16} };
+            break;
+        case 4:
+            s.bounds = { {0, 15}, {boundX, 16} };
+            break;
+        }
         //s.bounds = { {0, 5}, {5, 6} }; //stage 1
-        s.bounds = { {0, 10}, {5, 11} }; //stage 2
-        //s.bounds = { {0, 15}, {6, 16} }; //stage 3
+        //s.bounds = { {0, 10}, {5, 11} }; //stage 2
+        //s.bounds = { {0, 15}, {boundX, 16} }; //stage 3
 
         Player p;
         p.pos = { 0, 0 };
@@ -210,28 +230,48 @@ namespace sil {
             {{-1 * x_max, center_z}, {0.2f, z_length_half}}, {{x_max, center_z}, {0.2f, z_length_half}} ,
             //縦の壁 : ＝
             {{0, z_min}, {x_length_half, 0.1f}}, {{0, z_max}, {x_length_half, 0.1f}} ,
-
-            {{3, 13}, {2.5f, 0.2f}},//stage 2
         };
+        if (stageIdx >= 2) s.walls.push_back({ {3, 13}, {2.5f, 0.2f} });
+
         s.obstacles = {
             //stage 1
-            {Box{{0.55f, 0.55f}}, {0, 3}, RoundTrip{{0, 3}, {0, 5}, 2.0f}}, 
+            {Box{{0.55f, 0.55f}}, {0, 3}, RoundTrip{{0, 3}, {0, 5}, 2.0f}},
             {Box{{0.4f, 0.8f}}, {2, 6}, RoundTrip{{2, 5}, {2, 7}, 1.5f}},
             { Circle{0.5f} , {1, 4}, Orbit{ {1, 3} ,1, 180.0f, 0 } },
             { Circle{0.3f} , {0, 5}, Chase{2.0f} },
-            //stage 2
-            { Circle{0.7f} , {-3, 2}, Chase{1.5f} },
-            {Box{{0.4f, 0.8f}}, {3, 3}, Orbit{{3, 8}, 3 , 180, 2.5f}},
-            {Circle{0.5f}, {2, 6}, Orbit{{-2, 14}, 2 , 240, 4.0f}},
-            {Circle{0.7f}, {2, 6}, RoundTrip{{-1, 5}, {-3, 18}, 4.0f}},
-            //stage 3
-            //{Box{{1.0f, 1.0f}}, {2, 6}, RoundTrip{{-1, 5}, {-3, 20}, 3.0f}},
-            //{Box{{1.0f, 1.0f}}, {2, 6}, RoundTrip{{4, 16}, {-3, 22}, 4.0f}},
-            //{Box{{0.7f, 0.4f}}, {3, 3}, Orbit{{0, 17}, 5 , 90, 5.0f}},
-            //{Box{{2.0f, 0.5f}}, {2, 6}, RoundTrip{{-3, 25}, {3, 25}, 2.5f}},
-            //{ {{0, 3}, {0.55f, 0.55f}}, Axis::X, -3.5f, 3.5f, 2.0f},
-           //{ {{2, 6}, {0.4f, 0.8f}}, Axis::Z, 5.0f, 7.0f, 1.5f}
         };
+        if (stageIdx >= 2)
+        {
+            s.obstacles.insert(s.obstacles.end(),
+                {
+                { Circle{0.7f} , {-3, 2}, Chase{1.5f} },
+                {Box{{0.4f, 0.8f}}, {3, 3}, Orbit{{3, 8}, 3 , 180, 2.5f}},
+                {Circle{0.5f}, {2, 6}, Orbit{{-2, 14}, 2 , 240, 4.0f}},
+                {Circle{0.7f}, {2, 6}, RoundTrip{{-1, 5}, {-3, 18}, 4.0f}}
+                });
+            if(stageIdx >= 3)
+            {
+                s.obstacles.insert(s.obstacles.end(),
+                    {
+                    {Box{{1.0f, 1.0f}}, {2, 6}, RoundTrip{{-1, 5}, {-3, 20}, 3.0f}},
+                    {Box{{1.0f, 1.0f}}, {2, 6}, RoundTrip{{4, 16}, {-3, 22}, 4.0f}},
+                    {Box{{0.7f, 0.4f}}, {3, 3}, Orbit{{0, 17}, 5 , 90, 5.0f}},
+                    {Box{{2.0f, 0.5f}}, {2, 6}, RoundTrip{{-4, 25}, {4, 25}, 2.5f}},
+                    });
+                if (stageIdx >= 4)
+                {
+                    s.obstacles.insert(s.obstacles.end(),
+                        {
+                        { Circle{0.5f} , {4, 25}, Chase{2.5f} },
+                        {Box{{0.7f, 0.7f}}, {2, 6}, RoundTrip{{-4, 25}, {4, 28}, 3.0f}},
+                        {Circle{0.5f}, {2, 6}, RoundTrip{{-4, 27}, {0, 30}, 6.0f}},
+                        {Circle{0.5f}, {2, 6}, RoundTrip{{0, 30}, {4, 27}, 6.0f}},
+                        {Box{{4.0f, 0.30f}}, {2, 6}, RoundTrip{{-3, 29}, {3, 29}, 6.0f}},
+                        });
+                }
+            }
+        };
+
         return s;
     }
 
@@ -352,6 +392,13 @@ namespace sil {
         if (state_.gameState == GameState::Success) reward += 10.0f;
         if (state_.gameState == GameState::Collision) reward -= 1.0f;
         return { state_.gameState, reward };
+    }
+
+    //Astar用：途中でstateを挿入する
+    Environment::Environment(Stage stage,State state)
+    {
+        stage_ = stage;
+        state_ = state;
     }
 
 }

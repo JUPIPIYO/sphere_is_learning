@@ -1,6 +1,7 @@
 ﻿#include "ai/ga/GATrainer.hpp"
 #include "ai/ga/GAAgent.hpp"
 #include "ai/ga/GenomeFile.hpp"
+#include "ai/Astar/AstarAgent.hpp"
 #include <algorithm>
 #include <charconv>
 #include <iostream>
@@ -19,6 +20,7 @@ namespace
         std::string stage{ "demo" }, output{ "agent" }, input;
         std::uint32_t seed{ 42 };
         int generations{ 20 }, evaluations{ 1 };
+        int expandDepth{ 100 }, maxExpand{ 1000 };
     };
 
     void help() {
@@ -45,7 +47,7 @@ namespace
     {
         Options o;
         o.mode = argv[1];
-        if (o.mode != "train" && o.mode != "evaluate") throw std::invalid_argument("unknown mode");
+        if (o.mode != "astar" && o.mode != "train" && o.mode != "evaluate") throw std::invalid_argument("unknown mode");
         for (int i = 2; i < argc; ++i) {
             const string key = argv[i];
             if (i + 1 >= argc) throw std::invalid_argument("missing option value: " + key);
@@ -56,6 +58,8 @@ namespace
             else if (key == "--output" && o.mode == "train") o.output = value;
             else if (key == "--input" && o.mode == "evaluate") o.input = value;
             else if (key == "--evaluations" && o.mode == "evaluate") o.evaluations = number<int>(value);
+            else if (key == "--expandDepth" && o.mode == "astar") o.expandDepth = number<int>(value);
+            else if (key == "--maxExpand" && o.mode == "astar") o.maxExpand = number<int>(value);
             else throw std::invalid_argument("no option: " + key);
         }
         if (o.stage != "demo" || o.output.empty() || (o.mode == "evaluate" && o.input.empty())) throw std::invalid_argument("option out of range");
@@ -65,6 +69,8 @@ namespace
     {
         mt19937 random(o.seed);
         auto population = initPopulation(random);
+        std::cout << "generation" << ',' << "fitness" << ',' << "bestZ" << ',' << "surviveSeconds" << ',' << "State"
+            << '\n';
         for (int generation = 0; generation <= o.generations; ++generation) 
         {
             //populationを評価
@@ -87,7 +93,8 @@ namespace
             //最初、中間、最後の3回および50回ごとにsave
             if (generation == 0 || generation == o.generations / 2 || generation == o.generations || generation % 50 == 0) 
             {
-                const std::string dir = "results/GA/seed" + std::to_string(o.seed);
+                //const std::string dir = "results/GA/seed" + std::to_string(o.seed);
+                const std::string dir = o.output;
                 const std::string epoch = to_string(generation);
                 saveGenome(dir, epoch + "_fitness.sil", { best.gene, generation, o.seed,  best.metrics });
                 saveGenome(dir, epoch + "_distance.sil", { farthest->gene, generation, o.seed, farthest->metrics });
@@ -107,12 +114,26 @@ namespace
                  << '\n';
         }
     }
+
+    void astar(const Options& o)
+    {
+        std::cout << "fitness" << ',' << "bestZ" << ',' << "surviveSeconds" << ',' << "State"
+            << '\n';
+        auto agent = AstarAgent(o.expandDepth, o.maxExpand);
+        const Metrics m = evaluate(agent, o.seed);
+        std::cout << m.fitness << ',' << m.bestZ << ',' << m.surviveSeconds << ',' << StateToStr(m.end)
+            << '\n';
+    }
 }
 
 int main(int argc, char** argv) {
     try {
         const auto options = parse(argc, argv);
-        if (options.mode == "train") train(options);
+        if (options.mode == "astar")
+        {
+            astar(options);
+        }
+        else if (options.mode == "train") train(options);
         else evaluate(options);
     }
     catch (const std::exception& e) {

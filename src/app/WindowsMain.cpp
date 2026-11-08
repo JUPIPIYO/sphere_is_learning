@@ -220,7 +220,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
         constexpr uint32_t initialSeed = 42;
 
-        Environment env{ makeStage() };
+        vector<int> stages = { 1, 2, 3, 4 };
+        int currentStage = 1;
+
+        Environment env{ makeStage(currentStage) };
         env.reset(initialSeed);
 
         GameState lastEnd = GameState::Running;
@@ -233,8 +236,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         bool running = true;
         ShowWindow(window, showCommand);
 
-        //ステージ選択部分を表示するための変数
-        int selectedStage = 0;
         bool mainPlaying = false;
 
         //過去のリザルトを5回分だけ保持して、表示する
@@ -285,8 +286,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
             ImGui::NewFrame();
 
             if (ImGui::Begin("Stage selection")) {
-                //ステージの選択ボタンを表示
-                ImGui::RadioButton("Stage 1", &selectedStage, 0);
 
                 if (!mainPlaying)
                 {
@@ -315,6 +314,35 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                         j++;
                         if (j >= 15) break;
                     }
+                }
+
+                static size_t stage_idx = 0;
+                //ステージ
+                if (ImGui::BeginCombo("STAGE", to_string(currentStage).c_str()))
+                {
+                    for (size_t i = 0; i < stages.size(); i++)
+                    {
+                        bool is_selected = (stage_idx == i);
+
+                        int stage = stages[i];
+
+                        if (ImGui::Selectable(to_string(stage).c_str(), is_selected))
+                        {
+                            stage_idx = i; // インデックスを更新
+                            //違うステージになるならハードリセット
+                            if (currentStage != stage)
+                            {
+                                currentStage = stage;
+                                env = Environment(makeStage(currentStage));
+                                env.reset(initialSeed);
+                            }
+                        }
+
+                        if (is_selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
                 }
 
                 //ImGui::Text("Result : %s Reward : %.1f", StateToStr(lastEnd).c_str(), lastReward);
