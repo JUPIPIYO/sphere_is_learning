@@ -14,7 +14,7 @@ namespace sil
 
 	inline constexpr size_t CellKinds = 4; //セルの種類(セルに存在するオブジェクトの種類)の数
 	inline constexpr size_t neighborCount = 8; //隣接マスの数 3x3 - 1
-	inline constexpr float cellWidth = 1.0f; //セルの大きさ
+	inline constexpr float cellWidth = 0.7f; //セルの大きさ
 	inline constexpr int decisionSteps = 4; //方策を変更するフレーム感覚
 
 	inline constexpr size_t stateSize = 1 << 16; //ありえる状況の総数

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="560" fill="#ffffff"/>
+
+  <!-- core -->
+  <rect x="310" y="30" width="340" height="120" rx="12" fill="#E8F0FE" stroke="#3B6FD8" stroke-width="2.5"/>
+  <text x="480" y="68" text-anchor="middle" font-size="22" font-weight="bold" fill="#1F3F8F">ゲーム本体（sphere_core）</text>
+  <text x="480" y="98" text-anchor="middle" font-size="16" fill="#333">移動・衝突・障害物・クリア判定</text>
+  <text x="480" y="124" text-anchor="middle" font-size="15" fill="#555">Windows・DirectXに依存しない</text>
+
+  <!-- renderer -->
+  <rect x="40" y="230" width="280" height="100" rx="12" fill="#FFF4E5" stroke="#E08A1E" stroke-width="2.5"/>
+  <text x="180" y="270" text-anchor="middle" font-size="20" font-weight="bold" fill="#8A4B00">描画（Renderer）</text>
+  <text x="180" y="302" text-anchor="middle" font-size="16" fill="#333">Direct3D 11・ImGui</text>
+
+  <!-- ai -->
+  <rect x="640" y="230" width="280" height="100" rx="12" fill="#E9F7EF" stroke="#2E9E5B" stroke-width="2.5"/>
+  <text x="780" y="270" text-anchor="middle" font-size="20" font-weight="bold" fill="#1B6B3C">AI（sphere_ai）</text>
+  <text x="780" y="302" text-anchor="middle" font-size="16" fill="#333">遺伝的アルゴリズム・A*</text>
+
+  <!-- apps -->
+  <rect x="40" y="420" width="400" height="100" rx="12" fill="#F4F4F4" stroke="#888" stroke-width="2"/>
+  <text x="240" y="458" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">画面あり：プレイ・AIデモ</text>
+  <text x="240" y="490" text-anchor="middle" font-size="15" fill="#555">sphere_game / sphere_aidemo</text>
+
+  <rect x="520" y="420" width="400" height="100" rx="12" fill="#F4F4F4" stroke="#888" stroke-width="2"/>
+  <text x="720" y="458" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">描画なし：学習・評価</text>
+  <text x="720" y="490" text-anchor="middle" font-size="15" fill="#555">sphere_experiment / sphere_headless</text>
+
+  <!-- arrows: renderer -> core, ai -> core -->
+  <path d="M180,230 L180,90 L306,90" fill="none" stroke="#555" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="192" y="175" font-size="15" fill="#8A4B00">状態を読むだけ</text>
+  <text x="192" y="197" font-size="15" fill="#8A4B00">（変更しない）</text>
+
+  <path d="M780,230 L780,90 L654,90" fill="none" stroke="#555" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="768" y="175" text-anchor="end" font-size="15" fill="#1B6B3C">観測を受け取り</text>
+  <text x="768" y="197" text-anchor="end" font-size="15" fill="#1B6B3C">行動（9種）を返す</text>
+
+  <!-- arrows: apps -> renderer / ai -->
+  <path d="M180,420 L180,334" fill="none" stroke="#555" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M780,420 L780,334" fill="none" stroke="#555" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <text x="480" y="548" text-anchor="middle" font-size="13" fill="#888">矢印は「使う側 → 使われる側」</text>
+</svg>

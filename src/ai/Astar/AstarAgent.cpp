@@ -1,5 +1,16 @@
 ﻿#include "ai/Astar/AstarAgent.hpp"
+#include <unordered_set>
 
+
+namespace
+{
+	long long calucKey(sil::Vec2 pos)
+	{
+		int gridX = static_cast<int>(std::floor((pos.x + sil::boundX) / sil::grid));
+		int gridZ = static_cast<int>(std::floor((pos.z + 1) / sil::grid));
+		return static_cast<long long>(gridX << 6 + gridZ);
+	}
+}
 
 namespace sil
 {
@@ -91,10 +102,13 @@ namespace sil
 
 		//まず現時点を入れる
 		int h = heuristic(dummyEnv, z_max);
-		nodeVec.push_back({ dummyEnv, 0, h, -1, Direc::Stop});
+		nodeVec.push_back({ dummyEnv, 0, h, -1, Direc::Stop, calucKey(dummyEnv.state().player.pos)});
 		open.push({ 0 + h, 0});
 
 		int expandTime = 0;
+
+		std::unordered_set<long long> visited;  // 探索開始時に空にする
+
 		//ループ
 		while (!open.empty() && expandTime < maxExpand) 
 		{
@@ -141,7 +155,13 @@ namespace sil
 
 				int g = (idx == -1) ? 0 : nodeVec[idx].g + macroStep;
 				int h = heuristic(kidE, z_max);
-				nodeVec.push_back({ kidE, g, h, idx, d });
+
+				Vec2 currentPos = kidE.state().player.pos;
+				long long key = calucKey(currentPos);
+				//枝刈り
+				if (!visited.insert(key).second) continue;
+
+				nodeVec.push_back({ kidE, g, h, idx, d, key });
 				int childIdx = (int)nodeVec.size() - 1;
 				open.push({ g + h, childIdx });
 

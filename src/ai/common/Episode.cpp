@@ -4,15 +4,21 @@
 
 namespace sil
 {
-	float calucFitness(StepResult result)
+	//GAのfitnessを計算
+	float calucFitness(const Environment& env)
 	{
-		return result.reward;
+		if (env.state().gameState == GameState::Success)
+		{
+			//成功の場合は早いほどgood
+			return 100 - env.surviveSec();
+		}
+		return env.bestZ(); //+ 0.1 * env.surviveSec();
 	}
 
-	Metrics evaluate(Agent& agent, uint32_t seed)
+	Metrics evaluate(Agent& agent, uint32_t seed, int stageIdx)
 	{
 		//環境を作成し、実際にどんな成果を生み出すかを判定
-		Environment env(makeStage(3));
+		Environment env(makeStage(stageIdx));
 		env.reset(seed);
 
 
@@ -23,7 +29,7 @@ namespace sil
 			lastResult = env.step(d);
 		}
 
-		float fitness = env.bestZ();
+		float fitness = calucFitness(env);
 
 		//結果
 		return Metrics{ fitness, env.bestZ(), env.surviveSec(), env.state().gameState };

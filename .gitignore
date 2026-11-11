@@ -37,3 +37,7 @@ compile_commands.json
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local working notes (not shared)
+/docs/handoff.md
+/docs/cpp_tutorial.md

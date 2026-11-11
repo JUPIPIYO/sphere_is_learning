@@ -61,10 +61,16 @@ namespace
     };
 
 
-    void advanceGame(Environment& env, Agent* agent, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards)
+    void advanceGame(Environment& env, Agent* agent, GameState& lastState, uint32_t initialSeed, float& lastReward, vector<string>& lastResults, vector<float>& lastRewards, double& maxPlanMs)
     {
         //ここでnextDirecを呼ぶ
+        const auto t0 = std::chrono::steady_clock::now();
+
         Direc d = agent->nextDirec(env);
+
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        maxPlanMs = std::max(maxPlanMs, ms);
+
         auto result = env.step(d);
 
         if (result.end != GameState::Running)
@@ -233,16 +239,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         SavedGenome saved;
         if (model == L"ga")
         {
-            std::filesystem::path genomePath = args[2];
+            std::filesystem::path genomeFolder = args[2];
+            std::filesystem::path genomePath = args[3];
             if (genomePath.empty()) {
-                const auto latest = findLatestGenome("results/GA/seed42/", "distance");
-                if (!latest) throw std::runtime_error("results/GA/seed42/ has no *_distance.sil");
+                const auto latest = findLatestGenome(genomeFolder, "fitness");
+                if (!latest) throw std::runtime_error("genome Folder has no *_distance.sil");
                 genomePath = *latest;
             }
 
             //現ディレクトリ上のファイルを全取得
-            std::filesystem::path dirPath = "results/GA/seed42";
-            for (auto& entry : std::filesystem::directory_iterator(dirPath))
+            for (auto& entry : std::filesystem::directory_iterator(genomeFolder))
             {
                 if (!entry.is_regular_file()) continue;
 
@@ -269,7 +275,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         int currentStage = 1;
 
 
-        //ここらへんガチでなにやってるかわからん
         constexpr wchar_t className[] = L"SphereIsLearningAIDemoWindow";
         WNDCLASSEXW windowClass{};
         windowClass.cbSize = sizeof(windowClass);
@@ -330,6 +335,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         vector<string> lastResults;
         vector<float> lastRewards;
 
+        //astar用：方策決定にかかった時間
+        double maxPlanMs = 0;
+        double maxFrameMs = 0;
+
         while (running) {
             MSG message{};
             while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
@@ -365,7 +374,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 Sleep(10);
                 continue;
             }
-            const double elapsed = min(std::chrono::duration<double>(now - previousTime).count(), 0.25);
+
+            double elapsedFrame = std::chrono::duration<double>(now - previousTime).count();
+            maxFrameMs = max(maxFrameMs, elapsedFrame * 1000); //sec単位なので1000倍
+
+            const double elapsed = min(elapsedFrame, 0.25);
             previousTime = now;
 
             // GUIの追加
@@ -427,6 +440,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                     ImGui::Text("bestZ : %f, survivedSec : %f, result : %s", saved.metrics.bestZ, saved.metrics.surviveSeconds, StateToStr(saved.metrics.end).c_str());
 
                 }
+
+                else
+                {
+                    ImGui::Text("plan max %.2f ms / frame max %.2f ms", maxPlanMs, maxFrameMs);
+                    if (ImGui::Button("Reset stats")) { maxPlanMs = 0; maxFrameMs = 0; }
+                }
+
                 static size_t speed_idx = 0;
                 //倍速
                 if (ImGui::BeginCombo("SPEED", to_string(currentSpeed).c_str()))
@@ -506,7 +526,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
                 while (accumulator >= sil::Environment::dt)
                 {
-                    advanceGame(env, agent.get(), lastEnd, initialSeed, lastReward, lastResults, lastRewards);
+                    advanceGame(env, agent.get(), lastEnd, initialSeed, lastReward, lastResults, lastRewards, maxPlanMs);
                     accumulator -= sil::Environment::dt;
                 }
             }

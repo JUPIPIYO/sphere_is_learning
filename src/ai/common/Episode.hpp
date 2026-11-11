@@ -16,5 +16,5 @@ namespace sil
 
 	float calucFitness(StepResult result);
 
-	Metrics evaluate(Agent& agent, uint32_t seed);
+	Metrics evaluate(Agent& agent, uint32_t seed, int stageIdx);
 }

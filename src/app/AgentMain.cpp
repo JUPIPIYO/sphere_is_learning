@@ -17,7 +17,8 @@ namespace
     struct Options 
     {
         std::string mode;
-        std::string stage{ "demo" }, output{ "agent" }, input;
+        int stageIdx;
+        std::string output{ "agent" }, input;
         std::uint32_t seed{ 42 };
         int generations{ 20 }, evaluations{ 1 };
         int expandDepth{ 100 }, maxExpand{ 1000 };
@@ -51,8 +52,8 @@ namespace
         for (int i = 2; i < argc; ++i) {
             const string key = argv[i];
             if (i + 1 >= argc) throw std::invalid_argument("missing option value: " + key);
-            const string value = argv[++i];
-            if (key == "--stage") o.stage = value;
+            const std::string value = argv[++i];
+            if (key == "--stage") o.stageIdx = std::stoi(value);
             else if (key == "--seed") o.seed = number<std::uint32_t>(value);
             else if (key == "--generations" && o.mode == "train") o.generations = number<int>(value);
             else if (key == "--output" && o.mode == "train") o.output = value;
@@ -62,7 +63,7 @@ namespace
             else if (key == "--maxExpand" && o.mode == "astar") o.maxExpand = number<int>(value);
             else throw std::invalid_argument("no option: " + key);
         }
-        if (o.stage != "demo" || o.output.empty() || (o.mode == "evaluate" && o.input.empty())) throw std::invalid_argument("option out of range");
+        if (o.stageIdx < 0 || o.stageIdx > 4 || o.output.empty() || (o.mode == "evaluate" && o.input.empty())) throw std::invalid_argument("option out of range");
         return o;
     }
     void train(const Options& o) 
@@ -74,7 +75,7 @@ namespace
         for (int generation = 0; generation <= o.generations; ++generation) 
         {
             //populationを評価
-            evalPopulation(population, o.seed);
+            evalPopulation(population, o.seed, o.stageIdx);
             //平均を取得
             float mean = 0;
             for (const auto& i : population) mean += i.metrics.fitness;
@@ -87,8 +88,8 @@ namespace
                 return a.metrics.bestZ < b.metrics.bestZ;
                 });
             const auto m = best.metrics;
-            cout << generation << ',' << m.fitness << ',' << mean << ',' << farthest->metrics.bestZ
-                << ',' << m.surviveSeconds << ',' << StateToStr(m.end) << ',' << static_cast<int>(m.end) << '\n';
+            cout << "gen:" << generation << ',' << "fit:" << m.fitness << ',' << "bestZ:" << farthest->metrics.bestZ
+                << ',' << "sec:" << m.surviveSeconds << ',' << StateToStr(m.end) << '\n';
 
             //最初、中間、最後の3回および50回ごとにsave
             if (generation == 0 || generation == o.generations / 2 || generation == o.generations || generation % 50 == 0) 
@@ -109,7 +110,7 @@ namespace
         GAAgent ga{ saved.genes };
         for (int trial = 0; trial < o.evaluations; ++trial) 
         {
-            const Metrics m = evaluate(ga, o.seed);
+            const Metrics m = evaluate(ga, o.seed, o.stageIdx);
             std::cout << trial << ',' << m.fitness << ',' << m.bestZ << ',' << m.surviveSeconds << ',' << StateToStr(m.end)
                  << '\n';
         }
@@ -120,7 +121,7 @@ namespace
         std::cout << "fitness" << ',' << "bestZ" << ',' << "surviveSeconds" << ',' << "State"
             << '\n';
         auto agent = AstarAgent(o.expandDepth, o.maxExpand);
-        const Metrics m = evaluate(agent, o.seed);
+        const Metrics m = evaluate(agent, o.seed, o.stageIdx);
         std::cout << m.fitness << ',' << m.bestZ << ',' << m.surviveSeconds << ',' << StateToStr(m.end)
             << '\n';
     }

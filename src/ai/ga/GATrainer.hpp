@@ -6,8 +6,8 @@
 
 namespace sil
 {
-  inline constexpr int sizePerEp = 64;
-  inline constexpr int elitePerEp = 4;
+  inline constexpr int sizePerEp = 512;
+  inline constexpr int elitePerEp = 32;
 
   struct Individual
   {
@@ -16,6 +16,6 @@ namespace sil
   };
 
   std::vector<Individual> initPopulation(std::mt19937& random, int count = sizePerEp);
-  void evalPopulation(std::vector<Individual>& population, std::uint32_t seed);
-  std::vector<Individual> nextPopulation(const std::vector<Individual>& population, std::mt19937& random, int count = sizePerEp, float mutationRate = 0.01);
+  void evalPopulation(std::vector<Individual>& population, std::uint32_t seed, int stageIdx);
+  std::vector<Individual> nextPopulation(const std::vector<Individual>& population, std::mt19937& random, int count = sizePerEp, float mutationRate = 0.02);
 }

@@ -23,7 +23,7 @@ namespace sil
 		return pop;
 	}
 
-	void evalPopulation(std::vector<Individual>& population, std::uint32_t seed)
+	void evalPopulation(std::vector<Individual>& population, std::uint32_t seed, int stageIdx)
 	{
 		for (int i = 0; i < population.size(); i++)
 		{
@@ -31,7 +31,7 @@ namespace sil
 
 			GAAgent ga{ indi.gene };
 
-			indi.metrics = evaluate(ga, seed);
+			indi.metrics = evaluate(ga, seed, stageIdx);
 
 		}
 
@@ -61,9 +61,10 @@ namespace sil
 		{
 			Genome g;
 
-			//親の選択：適当に2体選ぶ
-			Individual father = population[dist(random)];
-			Individual mother = population[dist(random)];
+			//親の選択：適当に3体選んでその中からbest
+			//populationは降順になっているのでminのindexでOK
+			const Individual& father = population[min(min(dist(random), dist(random)), dist(random))];
+			const Individual& mother = population[min(min(dist(random), dist(random)), dist(random))];
 
 			for (int i = 0; i < stateSize; i++)
 			{
